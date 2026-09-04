@@ -79,3 +79,9 @@ data/results/*
 
 *.tmp
 *.temp
+
+# ==============================
+# MediaPipe models
+# ==============================
+
+vision/models/*.task
