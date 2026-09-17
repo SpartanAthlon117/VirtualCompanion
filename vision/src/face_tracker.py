@@ -4,6 +4,7 @@ import threading
 import time
 
 from face_metrics import eye_aspect_ratio
+from ear_calibrator import EARCalibrator
 
 
 MODEL_PATH = "vision/models/face_landmarker.task"
@@ -52,6 +53,12 @@ def main():
     }
 
     result_lock = threading.Lock()
+
+    calibrator = EARCalibrator(
+        duration_seconds=5.0,
+        stabilization_seconds=1.0,
+        minimum_ear=0.15,
+    )
 
     def on_face_landmarker_result(
         result,
@@ -131,6 +138,12 @@ def main():
                 "También puedes cerrar la ventana con X."
             )
 
+            calibrator.start()
+
+            print("Calibración EAR iniciada.")
+
+            calibration_start = time.monotonic()
+
             last_timestamp_ms = 0
 
             while True:
@@ -195,8 +208,125 @@ def main():
                         latest_result["landmarks"].copy()
                     )
 
-                if face_detected:
+                # ============================================================
+                # ACTUALIZAR CALIBRACIÓN
+                # ============================================================
 
+                if face_detected:
+                    elapsed = (
+                        time.monotonic() - calibration_start
+                    )
+
+                    print(
+                        f"DEBUG | "
+                        f"Tiempo: {elapsed:.2f}s | "
+                        f"EAR: {average_ear:.3f} | "
+                        f"Completada: {calibrator.is_completed()} | "
+                        f"Muestras: {calibrator.get_sample_count()}"
+                    )
+
+                    calibrator.update(average_ear)
+
+
+                # ============================================================
+                # MOSTRAR ESTADO DE CALIBRACIÓN
+                # ============================================================
+
+                if not calibrator.is_completed():
+
+                    progress = (
+                        calibrator.get_progress()
+                        * 100
+                    )
+
+                    sample_count = (
+                        calibrator.get_sample_count()
+                    )
+
+                    current_ear = (
+                        calibrator.get_current_ear()
+                    )
+
+                    print(
+                        f"CALIBRANDO | "
+                        f"Progreso: {progress:.0f}% | "
+                        f"Muestras: {sample_count} | "
+                        f"EAR: {current_ear}"
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "CALIBRANDO EAR...",
+                        (20, 170),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 255),
+                        2,
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "Mantén los ojos abiertos por favor",
+                        (20, 200),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (255, 255, 255),
+                        2,
+                    )
+
+                    cv2.putText(
+                        frame,
+                        f"Progreso: {progress:.0f}%",
+                        (20, 230),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (255, 255, 255),
+                        2,
+                    )
+
+                    cv2.putText(
+                        frame,
+                        f"Muestras: {sample_count}",
+                        (20, 260),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (255, 255, 255),
+                        2,
+                    )
+
+                    if current_ear is not None:
+                        cv2.putText(
+                            frame,
+                            f"EAR actual: {current_ear:.3f}",
+                            (20, 290),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            (255, 255, 255),
+                            2,
+                        )
+                else:
+                    reference_ear = (
+                        calibrator.get_reference_ear()
+                    )
+
+                    if reference_ear is not None:
+                        cv2.putText(
+                            frame,
+                            f"EAR referencia: "
+                            f"{reference_ear:.3f}",
+                            (20, 170),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 255, 0),
+                            2,
+                        )
+
+
+                # ============================================================
+                # MOSTRAR ESTADO DEL ROSTRO
+                # ============================================================
+
+                if face_detected:
                     # Dibujar los landmarks del rostro.
                     for (
                         x_normalized,
@@ -262,6 +392,7 @@ def main():
                     )
 
                 else:
+
                     cv2.putText(
                         frame,
                         "Rostro no detectado",
