@@ -5,6 +5,9 @@ import time
 
 from face_metrics import eye_aspect_ratio
 from ear_calibrator import EARCalibrator
+# Incorporación de la clase EyeStateClassifier
+# para el control de los ojos.
+from eye_state import EyeStateClassifier
 
 
 MODEL_PATH = "vision/models/face_landmarker.task"
@@ -58,6 +61,10 @@ def main():
         duration_seconds=5.0,
         stabilization_seconds=1.0,
         minimum_ear=0.15,
+    )
+
+    eye_classifier = EyeStateClassifier(
+        threshold_factor=0.70,
     )
 
     def on_face_landmarker_result(
@@ -211,22 +218,40 @@ def main():
                 # ============================================================
                 # ACTUALIZAR CALIBRACIÓN
                 # ============================================================
-
                 if face_detected:
                     elapsed = (
                         time.monotonic() - calibration_start
                     )
+
+                    calibrator.update(average_ear)
+
+                    eye_state = None
+
+                    if calibrator.is_completed():
+                        reference_ear = calibrator.get_reference_ear()
+
+                        if (
+                            eye_classifier.get_reference_ear()
+                            is None
+                            and reference_ear is not None
+                        ):
+                            eye_classifier.set_reference_ear(
+                                reference_ear,
+                            )
+
+                        if eye_classifier.get_reference_ear() is not None:
+                            eye_state = eye_classifier.classify(
+                                average_ear,
+                            )
 
                     print(
                         f"DEBUG | "
                         f"Tiempo: {elapsed:.2f}s | "
                         f"EAR: {average_ear:.3f} | "
                         f"Completada: {calibrator.is_completed()} | "
-                        f"Muestras: {calibrator.get_sample_count()}"
+                        f"Muestras: {calibrator.get_sample_count()} | "
+                        f"Ojos: {eye_state}"
                     )
-
-                    calibrator.update(average_ear)
-
 
                 # ============================================================
                 # MOSTRAR ESTADO DE CALIBRACIÓN
@@ -321,6 +346,16 @@ def main():
                             2,
                         )
 
+                        if eye_state is not None:
+                            cv2.putText(
+                                frame,
+                                f"Ojos: {eye_state}",
+                                (20, 165),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6,
+                                (255, 255, 255),
+                                2,
+                            )
 
                 # ============================================================
                 # MOSTRAR ESTADO DEL ROSTRO

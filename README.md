@@ -19,9 +19,19 @@ Desarrollar un prototipo modular capaz de detectar indicadores de fatiga mediant
 - C#
 - Git
 
+### Clasificación del estado ocular
+
+El sistema utiliza el EAR promedio y el EAR de referencia obtenido
+durante la calibración para clasificar el estado actual de los ojos
+como OPEN o CLOSED.
+
+La clasificación utiliza un umbral relativo basado en el EAR de
+referencia. Este parámetro es experimental y todavía no representa
+un umbral validado para detección de fatiga.
+
 ## Estructura
 
-- ision/ — visión por computadora y detección de fatiga.
+- vision/ — visión por computadora y detección de fatiga.
 - unity/ — aplicación visual y avatar virtual.
 - config/ — configuración del sistema.
 - data/ — datos y resultados experimentales.
