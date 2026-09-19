@@ -116,6 +116,9 @@ ls -lh vision/models/
 
 Si `face_landmarker.task` no está presente, debe descargarse nuevamente desde la fuente oficial de MediaPipe utilizada por el proyecto.
 
+wget -O vision/models/face_landmarker.task \
+https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task
+
 > No se debe eliminar la regla de `.gitignore` únicamente para subir el modelo al repositorio.
 
 ## 8. Comprobar la cámara web

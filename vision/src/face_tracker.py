@@ -350,9 +350,9 @@ def main():
                             cv2.putText(
                                 frame,
                                 f"Ojos: {eye_state}",
-                                (20, 165),
+                                (20, 200),
                                 cv2.FONT_HERSHEY_SIMPLEX,
-                                0.6,
+                                0.7,
                                 (255, 255, 255),
                                 2,
                             )
