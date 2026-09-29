@@ -8,6 +8,7 @@ from ear_calibrator import EARCalibrator
 # Incorporación de la clase EyeStateClassifier
 # para el control de los ojos.
 from eye_state import EyeStateClassifier
+from blink_detector import BlinkDetector
 
 
 MODEL_PATH = "vision/models/face_landmarker.task"
@@ -66,6 +67,8 @@ def main():
     eye_classifier = EyeStateClassifier(
         threshold_factor=0.70,
     )
+
+    blink_detector = BlinkDetector()
 
     def on_face_landmarker_result(
         result,
@@ -244,13 +247,26 @@ def main():
                                 average_ear,
                             )
 
+                            blink_detector.update(eye_state)
+
+                            if blink_detector.is_blink():
+                                closed_duration = (
+                                    blink_detector.get_last_closed_duration()
+                                )
+
+                                print(
+                                    f"EVENTO | Parpadeo detectado | "
+                                    f"Duración cierre: {closed_duration:.3f}s"
+                                )
+
                     print(
                         f"DEBUG | "
                         f"Tiempo: {elapsed:.2f}s | "
                         f"EAR: {average_ear:.3f} | "
                         f"Completada: {calibrator.is_completed()} | "
                         f"Muestras: {calibrator.get_sample_count()} | "
-                        f"Ojos: {eye_state}"
+                        f"Ojos: {eye_state} | "
+                        f"Parpadeos: {blink_detector.get_blink_count()}"
                     )
 
                 # ============================================================
