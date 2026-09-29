@@ -46,6 +46,14 @@ git status
 
 Desde la raíz del proyecto:
 
+En windows:
+
+```bash
+python -m venv .venv
+```
+
+En Linux:
+
 ```bash
 python3.13 -m venv .venv
 ```

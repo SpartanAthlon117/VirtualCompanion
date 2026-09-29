@@ -32,8 +32,16 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Calibración automática del EAR de referencia.
 * Clasificación experimental del estado ocular.
 * Clasificación y visualización del estado de los ojos como `OPEN` o `CLOSED`.
+* Detección de eventos de parpadeo mediane la transición `OPEN → CLOSED → OPEN`.
+* Medición
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
+
+El detector de parpadeos utiliza la secuencia temporal del estado ocular para identificar eventos de parpadeo y registra la duración del cierre ocular en segundos.
+
+La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esta medición permitirá posteriormente diferenciar parpadeos normales de cierres oculares prolongados.
+
+La duración del cierre ocular todavía no representa por sí sola una detección de fatiga. Será utilizada como uno de los indicadores dentro de las etapas posteriores del sistema.
 
 El umbral utilizado actualmente es relativo al EAR de referencia. Este parámetro es experimental y todavía no representa un umbral validado científicamente para la detección de fatiga.
 
@@ -52,9 +60,8 @@ El umbral utilizado actualmente es relativo al EAR de referencia. Este parámetr
 Las siguientes etapas contemplan:
 
 1. Estabilización temporal del estado ocular.
-2. Detección de parpadeos.
-3. Análisis de duración de cierres oculares.
-4. Detección de indicadores de fatiga.
-5. Máquina de estados de fatiga.
-6. Integración con el acompañante virtual.
-7. Integración de la interfaz 3D mediante Unity.
+2. Análisis de frecuencia y duración de los parpadeos.
+3. Detección de indicadores de fatiga.
+4. Máquina de estados de fatiga.
+5. Integración con el acompañante virtual.
+6. Integración de la interfaz 3D mediante Unity.
