@@ -21,6 +21,10 @@
 - `blink_detector.py`: corrección del registro del inicio del cierre ocular para evitar reiniciar el temporizador durante cada frame clasificado como `CLOSED`.
 - `face_tracker.py`: integración de la detección de parpadeos y visualización de la duración del cierre ocular cuando se detecta un parpadeo.
 - `README.md`: documentación de la detección de parpadeos y medición de duración de cierres oculares.
+- `blink_detector.py`: ampliación del detector de parpadeos para incorporar métricas temporales.
+- `blink_detector.py`: la frecuencia de parpadeo se calcula utilizando una ventana de análisis de 60 segundos.
+- `blink_detector.py`: separación entre los eventos utilizados para la frecuencia de parpadeo y el registro del último parpadeo detectado.
+- `README.md`: documentación de las nuevas métricas temporales del detector de parpadeos.
 
 ## [0.1.0] - 2026-09-18
 
