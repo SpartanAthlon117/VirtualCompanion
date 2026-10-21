@@ -79,6 +79,8 @@ data/results/*
 
 *.tmp
 *.temp
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
 
 # ==============================
 # MediaPipe models
