@@ -28,7 +28,8 @@ class BlinkDetector:
             )
 
         self.analysis_window_seconds = analysis_window_seconds
-
+        self.observation_start_time = None
+        
         self.previous_state = None
         self.blink_detected = False
         self.blink_count = 0
@@ -65,6 +66,9 @@ class BlinkDetector:
             )
 
         current_time = time.monotonic()
+        
+        if self.observation_start_time is None:
+            self.observation_start_time = current_time
 
         if (
             eye_state == self.CLOSED
@@ -153,8 +157,10 @@ class BlinkDetector:
 
     def get_blink_rate_per_minute(self):
         """
-        Devuelve la frecuencia estimada de parpadeos por minuto
-        dentro de la ventana de análisis.
+        Devuelve la frecuencia estimada de parpadeos por minuto.
+
+        Utiliza el tiempo observado mientras la ventana configurada
+        aún no se ha completado. Después, utiliza la ventana móvil.
         """
 
         current_time = time.monotonic()
@@ -164,10 +170,23 @@ class BlinkDetector:
         if not self.blink_timestamps:
             return 0.0
 
+        if self.observation_start_time is None:
+            return 0.0
+
+        elapsed_time = current_time -self.observation_start_time
+
+        observation_window = min(
+            elapsed_time,
+            self.analysis_window_seconds,
+        )
+
+        if observation_window <= 0:
+            return 0.0
+
         return (
             len(self.blink_timestamps)
             * 60.0
-            / self.analysis_window_seconds
+            / observation_window
         )
 
     def get_time_since_last_blink(self):
@@ -188,6 +207,8 @@ class BlinkDetector:
     def reset(self):
         """Reinicia completamente el detector y sus métricas."""
 
+        self.observation_start_time = None
+
         self.previous_state = None
         self.blink_detected = False
         self.blink_count = 0
@@ -200,3 +221,4 @@ class BlinkDetector:
 
         self.total_closed_duration = 0.0
         self.completed_blinks = 0
+
