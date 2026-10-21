@@ -1,4 +1,4 @@
-﻿# Setup
+# Setup
 
 ## Requisitos actuales
 
@@ -27,9 +27,21 @@ La configuración de VS Code debe apuntar a:
 
 ## Dependencias
 
-Las dependencias del módulo de visión se definirán en:
+Las dependencias del módulo de visión se encuentran definidas en:
 
-ision/requirements.txt
+`vision/requirements.txt`
+
+Las dependencias de prueba están en:
+
+`vision/requirements-dev.txt`
+
+## Pruebas
+
+Desde la raíz del proyecto:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
 
 ## Nota
 

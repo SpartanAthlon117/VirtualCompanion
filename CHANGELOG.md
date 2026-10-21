@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 ## [Unreleased]
 
@@ -29,6 +29,12 @@
 - `blink_detector.py`: modificación del cálculo de frecuencia para utilizar el tiempo transcurrido durante la observación inicial y la ventana temporal móvil una vez completada la duración configurada.
 - `blink_detector.py`: reinicio del instante inicial de observación mediante `reset()` para iniciar correctamente un nuevo periodo de medición.
 - `README.md`: documentación del cálculo híbrido de frecuencia, de las variaciones durante la observación inicial y de la necesidad de lógica adicional para detectar cierres oculares prolongados.
+- `vision/requirements.txt`: versiones exactas (`opencv-contrib-python==4.14.0.94`, `mediapipe==1.1.1`, `numpy==2.2.6`); se usa `opencv-contrib-python` para evitar conflictos con el `cv2` de MediaPipe.
+- `vision/requirements-dev.txt`: versión exacta de `pytest`.
+- `vision/src/face_tracker.py`: ruta del modelo resuelta desde `__file__` y error explícito si no existe.
+- `README.md` y `docs/VirtualCompanion_SETUP.md`: instalación reproducible, descarga del modelo y ejecución de pruebas.
+- `docs/SETUP.md`: corrección de la ruta de dependencias y comandos de prueba.
+- Verificada la compatibilidad de MediaPipe 1.1.1 con Python 3.13 y la carga del modelo sin cámara.
 
 ### Fixed
 

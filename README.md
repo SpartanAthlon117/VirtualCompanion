@@ -1,4 +1,4 @@
-﻿# Virtual Companion
+# Virtual Companion
 
 Sistema holográfico de acompañante virtual para la prevención de fatiga y monitoreo del conductor en tractocamiones.
 
@@ -57,6 +57,38 @@ La lógica del detector cuenta los parpadeos completados mediante la transición
 También se conserva de manera independiente el instante del último parpadeo para poder calcular el tiempo transcurrido desde ese evento, incluso cuando el parpadeo ya se encuentra fuera de la ventana de análisis.
 
 Estas métricas constituyen indicadores temporales que posteriormente podrán utilizarse en el análisis de patrones asociados a la fatiga. En esta etapa no se utilizan todavía para determinar por sí solas un estado de fatiga.
+
+## Instalación y ejecución
+
+Requisitos: Windows, Python 3.13 (probado con 3.13.15) y Git.
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r vision/requirements.txt -r vision/requirements-dev.txt
+```
+
+Descarga el modelo de MediaPipe (no se versiona):
+
+```powershell
+New-Item -ItemType Directory -Force -Path vision/models | Out-Null
+Invoke-WebRequest -Uri "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task" -OutFile "vision/models/face_landmarker.task"
+```
+
+Ejecuta el seguimiento facial:
+
+```powershell
+.\.venv\Scripts\python.exe vision/src/face_tracker.py
+```
+
+Las versiones exactas de las dependencias están fijadas en `vision/requirements.txt` y `vision/requirements-dev.txt`.
+
+## Pruebas
+
+Desde la raíz del repositorio:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
 
 ## Estructura
 

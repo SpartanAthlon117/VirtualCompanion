@@ -90,19 +90,27 @@ python -m pip install --upgrade pip
 
 ## 5. Instalar dependencias
 
-Las dependencias de visión están definidas en `vision/requirements.txt`.
+Las dependencias de visión están definidas en `vision/requirements.txt` con versiones exactas.
 
 ```bash
 pip install -r vision/requirements.txt
 ```
 
-Actualmente incluye:
+Incluye:
 
 ```text
-opencv-python
-mediapipe
-numpy
+opencv-contrib-python==4.14.0.94
+mediapipe==1.1.1
+numpy==2.2.6
 ```
+
+Para ejecutar las pruebas automatizadas:
+
+```bash
+pip install -r vision/requirements-dev.txt
+```
+
+`opencv-contrib-python` es la dependencia de OpenCV que utiliza MediaPipe; evita instalar simultáneamente `opencv-python` y `opencv-contrib-python`, que compiten por el módulo `cv2`.
 
 ## 6. Comprobar dependencias
 
@@ -130,8 +138,19 @@ ls -lh vision/models/
 
 Si `face_landmarker.task` no está presente, debe descargarse nuevamente desde la fuente oficial de MediaPipe utilizada por el proyecto.
 
+En Linux:
+
+```bash
 wget -O vision/models/face_landmarker.task \
 https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task
+```
+
+En Windows (PowerShell):
+
+```powershell
+New-Item -ItemType Directory -Force -Path vision/models | Out-Null
+Invoke-WebRequest -Uri "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task" -OutFile "vision/models/face_landmarker.task"
+```
 
 > No se debe eliminar la regla de `.gitignore` únicamente para subir el modelo al repositorio.
 
@@ -195,6 +214,16 @@ Comprueba que:
 - Se obtiene un EAR de referencia al finalizar.
 
 Para salir puede utilizarse `q` o cerrar la ventana.
+
+### Ejecutar pruebas automatizadas
+
+Con `.venv` activo y desde la raíz del proyecto:
+
+```bash
+python -m pytest
+```
+
+Las pruebas actuales no requieren cámara. Las dependencias de prueba están en `vision/requirements-dev.txt`.
 
 ## 11. Comprobar Git
 
