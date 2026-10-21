@@ -3,6 +3,8 @@ import mediapipe as mp
 import threading
 import time
 
+from pathlib import Path
+
 from face_metrics import eye_aspect_ratio
 from ear_calibrator import EARCalibrator
 # Incorporación de la clase EyeStateClassifier
@@ -11,7 +13,11 @@ from eye_state import EyeStateClassifier
 from blink_detector import BlinkDetector
 
 
-MODEL_PATH = "vision/models/face_landmarker.task"
+MODEL_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "models"
+    / "face_landmarker.task"
+)
 WINDOW_NAME = "Virtual Companion - Face Tracking"
 
 # Landmarks de los ojos utilizados para calcular EAR.
@@ -20,8 +26,15 @@ RIGHT_EYE_POINTS = [362, 385, 387, 263, 373, 380]
 
 
 def create_face_landmarker(result_callback):
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            "No se encontró el modelo de MediaPipe en "
+            f"{MODEL_PATH}. Descárgalo desde la URL oficial "
+            "indicada en la documentación."
+        )
+
     base_options = mp.tasks.BaseOptions(
-        model_asset_path=MODEL_PATH
+        model_asset_path=str(MODEL_PATH)
     )
 
     options = mp.tasks.vision.FaceLandmarkerOptions(
