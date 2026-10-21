@@ -48,7 +48,11 @@ La duración del cierre ocular todavía no representa por sí sola una detecció
 
 El umbral utilizado actualmente es relativo al EAR de referencia. Este parámetro es experimental y todavía no representa un umbral validado científicamente para la detección de fatiga.
 
-El detector mantiene una ventana temporal de análisis de 60 segundos para calcular la frecuencia de parpadeo. Esta frecuencia representa la cantidad de parpadeos detectados dentro de dicha ventana.
+El detector utiliza una ventana temporal de análisis configurable, cuyo valor predeterminado es de 60 segundos, para calcular la frecuencia de parpadeo en parpadeos por minuto. Durante la fase inicial de observación, antes de completar la ventana configurada, el cálculo utiliza el tiempo transcurrido desde la primera actualización del detector. Una vez alcanzada la duración de la ventana, el cálculo utiliza los eventos registrados dentro de la ventana temporal móvil, excluyendo aquellos que quedan fuera de ella.
+
+Este enfoque híbrido permite estimar la frecuencia sin esperar a que transcurra un minuto completo desde el inicio de la observación. Sin embargo, las estimaciones iniciales pueden variar considerablemente debido al reducido tiempo de observación y no deben interpretarse de manera aislada como evidencia de fatiga.
+
+La lógica del detector cuenta los parpadeos completados mediante la transición `OPEN → CLOSED → OPEN`. Por ello, un cierre ocular que continúa sin una reapertura todavía no se registra como un parpadeo completado. La detección de cierres prolongados y la generación de alertas por fatiga requieren lógica temporal adicional.
 
 También se conserva de manera independiente el instante del último parpadeo para poder calcular el tiempo transcurrido desde ese evento, incluso cuando el parpadeo ya se encuentra fuera de la ventana de análisis.
 

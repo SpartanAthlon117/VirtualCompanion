@@ -12,6 +12,7 @@
 * `vision/src/blink_detector.py` con la clase `BlinkDetector`.
 * Detección de parpadeos mediante la transición `OPEN → CLOSED → OPEN`.
 * Medición de la duración de cada cierre ocular.
+* `vision/tests/test_blink_detector.py`: incorporación de 13 pruebas automatizadas para verificar el comportamiento del detector de parpadeos y sus métricas temporales.
 
 ### Changed
 
@@ -25,6 +26,13 @@
 - `blink_detector.py`: la frecuencia de parpadeo se calcula utilizando una ventana de análisis de 60 segundos.
 - `blink_detector.py`: separación entre los eventos utilizados para la frecuencia de parpadeo y el registro del último parpadeo detectado.
 - `README.md`: documentación de las nuevas métricas temporales del detector de parpadeos.
+- `blink_detector.py`: modificación del cálculo de frecuencia para utilizar el tiempo transcurrido durante la observación inicial y la ventana temporal móvil una vez completada la duración configurada.
+- `blink_detector.py`: reinicio del instante inicial de observación mediante `reset()` para iniciar correctamente un nuevo periodo de medición.
+- `README.md`: documentación del cálculo híbrido de frecuencia, de las variaciones durante la observación inicial y de la necesidad de lógica adicional para detectar cierres oculares prolongados.
+
+### Fixed
+
+- `vision/src/blink_detector.py`: corrección de la codificación de los docstrings (mojibake) y eliminación del BOM, preservando la lógica y las pruebas existentes.
 
 ## [0.1.0] - 2026-09-18
 

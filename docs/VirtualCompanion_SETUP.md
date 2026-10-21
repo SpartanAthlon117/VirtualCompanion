@@ -52,6 +52,12 @@ En windows:
 python -m venv .venv
 ```
 
+Activarlo en Windows:
+
+```bash
+.venv\Scripts\Activate.ps1
+```
+
 En Linux:
 
 ```bash
