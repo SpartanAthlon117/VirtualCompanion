@@ -12,6 +12,7 @@ aporte.
 - **P1-2 implementada y versionada**: pérdida de rostro con timeout de 0.5 s; calibración y parpadeos se pausan/reanudan, se descartan cierres interrumpidos y los landmarks obsoletos o incompletos se tratan como ausencia de rostro.
 - **P1-4 implementada y versionada**: overlay con parpadeos totales, último cierre, cierre promedio, frecuencia y tiempo desde el último parpadeo; formato aislado en `overlay_metrics.py` y estado de pausa visible.
 - **P1-5 implementada y versionada**: pruebas de `face_metrics` (distancias, EAR, escala y entradas inválidas) y `eye_state` (factores, referencia, frontera y errores).
+- **P1-6/P1-7 implementadas y versionadas**: documentación consolidada en `docs/SETUP.md`, estado M1 y contexto; CI de Windows/Python 3.13 con `pip check`, `compileall` y `pytest`; linter diferido.
 - Git: rama única `master`, remote `SpartanAthlon117/VirtualCompanion`.
 
 ## Decisiones (y por qué)
@@ -21,21 +22,25 @@ aporte.
 - **Python 3.13 se mantiene**: MediaPipe 1.1.1 publica wheel `py3-none-win_amd64` y funciona; no fue necesario bajar a 3.12.
 - **Pérdida de rostro**: solo se considera presente si el último resultado de MediaPipe es reciente (`FACE_LOSS_TIMEOUT_SECONDS = 0.5`). Calibrador y detector pausan su tiempo y descartan el cierre en curso; la ausencia no se interpreta como `CLOSED`.
 - **Overlay de métricas**: se muestra tras una calibración con referencia válida; `--` significa "sin datos" y los valores se congelan y se etiquetan cuando el rostro no está presente.
+- **Documentación canónica**: `docs/SETUP.md` es la guía de entorno; `docs/VirtualCompanion_SETUP.md` queda como referencia histórica. `docs/PROJECT_STATUS.md` refleja M1.
+- **CI**: Windows + Python 3.13 por ser el entorno validado; ejecuta `pip check`, `compileall` y `pytest`. Linter y formatter diferidos.
 - Clasificación ocular: umbral = 0.70 × EAR de referencia calibrado. **Experimental**, no validado para fatiga.
 - **Frontera de clasificación**: `ear < threshold` produce `CLOSED`; `ear == threshold` produce `OPEN`.
 - El detector solo cuenta parpadeos **completados** (`OPEN → CLOSED → OPEN`); un cierre sin reapertura no es parpadeo. Cierres prolongados/alertas requieren lógica temporal adicional.
 - Idioma del proyecto: comentarios, docstrings, UI, README/docs y commits en **español** (Conventional Commits con scope).
 
 ## Aprendizajes y errores a evitar
-- **Stack**: solo Python/OpenCV/MediaPipe están implementados. FastAPI, PostgreSQL, HTTP/WebSocket y la UI web del avatar figuran como contemplados en `AGENTS.md`/README, pero **no** existen en el repo (solo hay `vision/`, `data/`, `docs/`). No asumir que están instalados o integrados.
+- **Stack**: solo Python/OpenCV/MediaPipe están implementados. FastAPI, PostgreSQL, HTTP/WebSocket y la UI web del avatar figuran como contemplados en `AGENTS.md`/README, pero **no** existen en el repo (solo hay `vision/`, `data/`, `docs/` y `.github/`). No asumir que están instalados o integrados.
 - **Bug resuelto**: `observation_start_time` se fija en la primera actualización **válida**, no en la rama que lanza `ValueError`. No reintroducir esa asignación en el bloque de error (dejaba la frecuencia siempre en `0.0`).
 - **Ausencia de landmarks ≠ ojos cerrados**: `LIVE_STREAM` puede dejar de entregar resultados; usar un timeout de frescura y pausar evita parpadeos y muestras de calibración falsos.
 - **Overlay**: usar ASCII en `cv2.putText`; las fuentes Hershey no garantizan acentos.
 - **Codificación**: guardar siempre UTF-8 sin BOM. El mojibake (acentos españoles convertidos en secuencias de dos caracteres) aparece al decodificar UTF-8 como CP1252; verificarlo con una comprobación de bytes y no asumir que el editor conserva el BOM.
-- No confiar en la documentación: `docs/PROJECT_STATUS.md` sigue en M0; los `SETUP.md` ya se actualizaron parcialmente, pero pueden quedar referencias obsoletas. El código y los scripts son la fuente de verdad.
+- **Documentación**: `docs/SETUP.md` es la guía canónica y `docs/PROJECT_STATUS.md` se actualiza por hito. No asumir que las etapas futuras están implementadas; el código es la fuente de verdad.
+- **CI**: no afirmar que el workflow pasó hasta verlo en GitHub Actions; localmente solo se replican sus comandos.
 - Revisar `git status` y `git diff` antes y después de cada tarea; **no sobrescribir** ni descartar cambios del usuario.
 - Ejecutar pytest desde `vision/` falla con `ModuleNotFoundError: No module named 'vision'`.
 - No guardar secretos, credenciales ni datos personales en `MEMORY.md`, `AGENTS.md`, Git ni documentación.
 
 ## Próximos pasos
-- **P1-6/P1-7**: reconciliar documentación duplicada y evaluar CI/calidad estática.
+- **Validación pendiente**: revisar la primera ejecución de CI en GitHub Actions.
+- **Siguiente etapa funcional**: estabilización/validación de métricas y detección de fatiga.

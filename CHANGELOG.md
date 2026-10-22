@@ -18,6 +18,7 @@
 * `vision/src/overlay_metrics.py` con el formato de las métricas de parpadeo para el overlay.
 * `vision/tests/test_overlay_metrics.py`: pruebas del formato de las métricas del overlay.
 * `vision/tests/test_face_metrics.py` y `vision/tests/test_eye_state.py`: pruebas del cálculo del EAR, validación de entradas y clasificación ocular.
+* `.github/workflows/ci.yml`: integración continua en Windows/Python 3.13 con `pip check`, `compileall` y `pytest`.
 
 ### Changed
 
@@ -47,6 +48,12 @@
 - `vision/src/face_tracker.py`: visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia y tiempo desde el último parpadeo, con indicador de métricas activas o en pausa.
 - `README.md`: documentación de las métricas del overlay y actualización de las próximas etapas.
 - `vision/src/face_tracker.py`: mensaje explícito cuando la calibración termina sin muestras válidas.
+- `README.md`: estructura real del repositorio, separación entre tecnologías implementadas y contempladas, sección de calidad/CI y enlaces de documentación.
+- `docs/SETUP.md`: guía canónica consolidada para Windows y referencia para Linux.
+- `docs/VirtualCompanion_SETUP.md`: reducido a referencia histórica; el contenido anterior permanece en Git.
+- `docs/PROJECT_STATUS.md`: estado actualizado a M1, con limitaciones y pendientes.
+- `PROJECT_CONTEXT.md`: contexto breve y enlaces a documentos canónicos.
+- CI inicial limitada a dependencias, compilación y pruebas; linter y formatter diferidos.
 
 ### Fixed
 

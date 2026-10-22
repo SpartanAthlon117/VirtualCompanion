@@ -1,6 +1,6 @@
 # Virtual Companion
 
-Sistema holográfico de acompañante virtual para la prevención de fatiga y monitoreo del conductor en tractocamiones.
+Prototipo académico de acompañante virtual para el monitoreo de indicadores visuales asociados con la fatiga y la somnolencia en conductores de tractocamiones.
 
 ## Estado
 
@@ -8,16 +8,21 @@ En desarrollo.
 
 ## Objetivo
 
-Desarrollar un prototipo modular capaz de detectar indicadores de fatiga mediante visión por computadora y proporcionar asistencia mediante un acompañante virtual.
+Desarrollar un prototipo modular que integre visión por computadora para monitorear indicadores visuales asociados con la fatiga y proporcione asistencia mediante un acompañante virtual.
 
 ## Tecnologías principales
+
+Implementadas actualmente:
 
 * Python
 * OpenCV
 * MediaPipe
+* Git
+
+Contempladas para etapas posteriores:
+
 * Unity
 * C#
-* Git
 
 ## Estado actual
 
@@ -74,7 +79,7 @@ Cuando el rostro no está presente, las métricas se congelan y el overlay indic
 
 ## Instalación y ejecución
 
-Requisitos: Windows, Python 3.13 (probado con 3.13.15) y Git.
+El entorno validado es Windows con Python 3.13 (probado con 3.13.15) y Git. La guía detallada, incluida una referencia para Linux, está en [`docs/SETUP.md`](docs/SETUP.md).
 
 ```powershell
 py -3.13 -m venv .venv
@@ -104,17 +109,32 @@ Desde la raíz del repositorio:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-La suite incluye pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, formato del overlay y clasificación ocular.
+La suite incluye 57 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, formato del overlay y clasificación ocular.
+
+## Calidad y CI
+
+El flujo `.github/workflows/ci.yml` está configurado para ejecutarse en Windows con Python 3.13. Instala las dependencias fijadas, verifica su consistencia con `pip check`, compila `vision/` y ejecuta `pytest`.
+
+La verificación actual es funcional y sintáctica. No se ha adoptado todavía un linter o formatter porque el código existente no cuenta con una configuración acordada y su incorporación requiere una limpieza separada.
+
+## Documentación
+
+* [`docs/SETUP.md`](docs/SETUP.md) — guía canónica de entorno y ejecución.
+* [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — estado actual, limitaciones y pendientes.
+* [`docs/VirtualCompanion_SETUP.md`](docs/VirtualCompanion_SETUP.md) — referencia histórica; redirige a la guía canónica.
+* [`AGENTS.md`](AGENTS.md) — reglas permanentes del proyecto.
+* [`MEMORY.md`](MEMORY.md) — memoria entre sesiones.
+* [`CHANGELOG.md`](CHANGELOG.md) — registro de cambios.
 
 ## Estructura
 
-* `vision/` — visión por computadora y detección de indicadores de fatiga.
-* `unity/` — aplicación visual y avatar virtual.
-* `config/` — configuración del sistema.
-* `data/` — datos y resultados experimentales.
-* `docs/` — documentación técnica y experimental.
-* `scripts/` — herramientas auxiliares.
-* `tests/` — pruebas generales.
+* `vision/` — módulo de visión por computadora.
+  * `vision/src/` — captura, métricas, calibración, clasificación, parpadeos y overlay.
+  * `vision/tests/` — pruebas automatizadas.
+* `data/` — estructura para datos experimentales; actualmente solo contiene archivos `.gitkeep`.
+* `docs/` — documentación técnica, estado y guía de entorno.
+* `.github/workflows/` — integración continua.
+* `AGENTS.md`, `PROJECT_CONTEXT.md`, `MEMORY.md` y `CHANGELOG.md` — reglas, contexto, memoria y registro de cambios.
 
 ## Próximas etapas
 

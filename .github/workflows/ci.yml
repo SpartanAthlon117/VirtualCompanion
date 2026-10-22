@@ -1,0 +1,42 @@
+name: Integración continua
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            vision/requirements.txt
+            vision/requirements-dev.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r vision/requirements.txt -r vision/requirements-dev.txt
+
+      - name: Verificar dependencias
+        run: python -m pip check
+
+      - name: Compilar código Python
+        run: python -m compileall -q vision
+
+      - name: Ejecutar pruebas
+        run: python -m pytest -q
