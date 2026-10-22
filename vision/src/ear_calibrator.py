@@ -1,3 +1,4 @@
+import math
 import statistics
 import time
 
@@ -22,6 +23,7 @@ class EARCalibrator:
         self.reference_ear = None
         self.current_ear = None
         self.completed = False
+        self.paused_at = None
 
     def start(self):
         """Inicia una nueva sesión de calibración."""
@@ -31,14 +33,71 @@ class EARCalibrator:
         self.reference_ear = None
         self.current_ear = None
         self.completed = False
+        self.paused_at = None
+
+    def pause(self):
+        """
+        Pausa la calibración sin perder las muestras recogidas.
+
+        El tiempo transcurrido durante la pausa no se cuenta para
+        la duración total de la calibración.
+        """
+
+        if self.completed or self.paused_at is not None:
+            return
+
+        self.paused_at = time.monotonic()
+        self.current_ear = None
+
+    def resume(self):
+        """
+        Reanuda la calibración tras una pausa.
+
+        El tiempo pausado se excluye del tiempo total transcurrido.
+        """
+
+        if self.completed or self.paused_at is None:
+            return
+
+        if self.start_time is not None:
+            self.start_time += (
+                time.monotonic() - self.paused_at
+            )
+
+        self.paused_at = None
+
+    def is_paused(self):
+        """Indica si la calibración está pausada."""
+
+        return self.paused_at is not None
+
+    def _get_elapsed_time(self):
+        """Devuelve el tiempo transcurrido sin contar las pausas."""
+
+        if self.start_time is None:
+            return 0.0
+
+        end_time = (
+            self.paused_at
+            if self.paused_at is not None
+            else time.monotonic()
+        )
+
+        return max(0.0, end_time - self.start_time)
 
     def update(self, ear):
         """
         Recibe un nuevo valor de EAR y actualiza
         el estado de la calibración.
+
+        Si la calibración está pausada o el EAR no es un valor
+        finito, la actualización se ignora.
         """
 
-        if self.completed:
+        if self.completed or self.paused_at is not None:
+            return
+
+        if ear is None or not math.isfinite(ear):
             return
 
         if self.start_time is None:
@@ -46,9 +105,7 @@ class EARCalibrator:
 
         self.current_ear = ear
 
-        elapsed_time = (
-            time.monotonic() - self.start_time
-        )
+        elapsed_time = self._get_elapsed_time()
 
         #Durante el periodo de estabilización
         #todavía no se guardan muestras.
@@ -87,6 +144,8 @@ class EARCalibrator:
         """
         Devuelve el progreso de calibración
         como un valor entre 0.0 y 1.0.
+
+        El progreso no avanza mientras la calibración está pausada.
         """
 
         if self.start_time is None:
@@ -95,9 +154,7 @@ class EARCalibrator:
         if self.completed:
             return 1.0
 
-        elapsed_time = (
-            time.monotonic() - self.start_time
-        )
+        elapsed_time = self._get_elapsed_time()
 
         progress = (
             elapsed_time / self.duration_seconds

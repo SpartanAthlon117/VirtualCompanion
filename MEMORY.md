@@ -4,11 +4,12 @@ aporte.
 
 ## Estado actual
 - Milestone **M1 — visión por computadora**. Único módulo implementado: `vision/`. Cadena funcional: webcam → MediaPipe `FaceLandmarker` (LIVE_STREAM) → EAR → calibración → clasificación `OPEN/CLOSED` → detección de parpadeos con métricas temporales.
-- Detector de parpadeos completo: **13/13 pruebas pasan** (`vision/tests/test_blink_detector.py`, re-verificado 2026-10-21 desde la raíz). Corregidos el cálculo de frecuencia, el reinicio de `observation_start_time` en `reset()` y la codificación de los docstrings.
+- Suite de visión: **29/29 pruebas pasan** (`test_blink_detector`, `test_ear_calibrator`, `test_face_presence`; re-verificado 2026-10-22 desde la raíz). Corregidos el cálculo de frecuencia, el reinicio de `observation_start_time` en `reset()` y la codificación de los docstrings.
 - **T1 completada**: `vision/src/blink_detector.py` reparado a UTF-8 sin BOM (24 secuencias mojibake), sin cambios de lógica; CRLF preservados.
 - Frecuencia = **cálculo híbrido**: observación inicial por tiempo transcurrido; al completar la ventana (60 s por defecto, configurable) usa la ventana móvil. Estimaciones iniciales inestables; no leerse como fatiga.
 - **Estado Git**: T1, métricas, pruebas, reglas y memoria versionadas en `master` el 2026-10-21 (commits `fix`, `test`, `chore`, `docs`).
 - **P1-1/P1-3 implementadas y versionadas**: `.venv` (Python 3.13.15) con `opencv-contrib-python 4.14.0.94`, `mediapipe 1.1.1`, `numpy 2.2.6` y `pytest 9.1.1`; modelo en `vision/models/face_landmarker.task` (3.76 MB, ignorado por Git). Ruta del modelo resuelta con `pathlib` y error explícito si falta; carga del `FaceLandmarker` verificada sin cámara.
+- **P1-2 implementada y versionada**: pérdida de rostro con timeout de 0.5 s; calibración y parpadeos se pausan/reanudan, se descartan cierres interrumpidos y los landmarks obsoletos o incompletos se tratan como ausencia de rostro.
 - Git: rama única `master`, remote `SpartanAthlon117/VirtualCompanion`.
 
 ## Decisiones (y por qué)
@@ -16,6 +17,7 @@ aporte.
 - Ejecutar los scripts desde cualquier CWD: la ruta del modelo se resuelve desde `__file__` y Python añade `vision/src` a `sys.path`. Las pruebas importan `vision.src.*` y deben correr **desde la raíz**.
 - **Dependencias exactas**: versiones fijadas en `vision/requirements*.txt`. Se usa `opencv-contrib-python` (no `opencv-python`) porque es la dependencia de MediaPipe y evita dos paquetes compitiendo por `cv2`.
 - **Python 3.13 se mantiene**: MediaPipe 1.1.1 publica wheel `py3-none-win_amd64` y funciona; no fue necesario bajar a 3.12.
+- **Pérdida de rostro**: solo se considera presente si el último resultado de MediaPipe es reciente (`FACE_LOSS_TIMEOUT_SECONDS = 0.5`). Calibrador y detector pausan su tiempo y descartan el cierre en curso; la ausencia no se interpreta como `CLOSED`.
 - Clasificación ocular: umbral = 0.70 × EAR de referencia calibrado. **Experimental**, no validado para fatiga.
 - El detector solo cuenta parpadeos **completados** (`OPEN → CLOSED → OPEN`); un cierre sin reapertura no es parpadeo. Cierres prolongados/alertas requieren lógica temporal adicional.
 - Idioma del proyecto: comentarios, docstrings, UI, README/docs y commits en **español** (Conventional Commits con scope).
@@ -23,6 +25,7 @@ aporte.
 ## Aprendizajes y errores a evitar
 - **Stack**: solo Python/OpenCV/MediaPipe están implementados. FastAPI, PostgreSQL, HTTP/WebSocket y la UI web del avatar figuran como contemplados en `AGENTS.md`/README, pero **no** existen en el repo (solo hay `vision/`, `data/`, `docs/`). No asumir que están instalados o integrados.
 - **Bug resuelto**: `observation_start_time` se fija en la primera actualización **válida**, no en la rama que lanza `ValueError`. No reintroducir esa asignación en el bloque de error (dejaba la frecuencia siempre en `0.0`).
+- **Ausencia de landmarks ≠ ojos cerrados**: `LIVE_STREAM` puede dejar de entregar resultados; usar un timeout de frescura y pausar evita parpadeos y muestras de calibración falsos.
 - **Codificación**: guardar siempre UTF-8 sin BOM. El mojibake (acentos españoles convertidos en secuencias de dos caracteres) aparece al decodificar UTF-8 como CP1252; verificarlo con una comprobación de bytes y no asumir que el editor conserva el BOM.
 - No confiar en la documentación: `docs/PROJECT_STATUS.md` sigue en M0; los `SETUP.md` ya se actualizaron parcialmente, pero pueden quedar referencias obsoletas. El código y los scripts son la fuente de verdad.
 - Revisar `git status` y `git diff` antes y después de cada tarea; **no sobrescribir** ni descartar cambios del usuario.
@@ -30,6 +33,5 @@ aporte.
 - No guardar secretos, credenciales ni datos personales en `MEMORY.md`, `AGENTS.md`, Git ni documentación.
 
 ## Próximos pasos
-- **P1-2**: manejar la pérdida de rostro en detector/calibrador (no interpretar ausencia de landmarks como ojos cerrados).
-- **P1-4/P1-5**: integrar las métricas en el overlay y ampliar pruebas a `face_metrics`, `ear_calibrator` y `eye_state`.
+- **P1-4/P1-5**: integrar las métricas en el overlay y ampliar pruebas a `face_metrics` y `eye_state`.
 - **P1-6/P1-7**: reconciliar documentación duplicada y evaluar CI/calidad estática.

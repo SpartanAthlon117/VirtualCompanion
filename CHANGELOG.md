@@ -13,6 +13,8 @@
 * Detección de parpadeos mediante la transición `OPEN → CLOSED → OPEN`.
 * Medición de la duración de cada cierre ocular.
 * `vision/tests/test_blink_detector.py`: incorporación de 13 pruebas automatizadas para verificar el comportamiento del detector de parpadeos y sus métricas temporales.
+* `vision/src/face_presence.py` con `is_face_present()` y el tiempo máximo `FACE_LOSS_TIMEOUT_SECONDS`.
+* Pruebas automatizadas para el calibrador EAR, la presencia de rostro y la pausa del detector de parpadeos.
 
 ### Changed
 
@@ -35,10 +37,16 @@
 - `README.md` y `docs/VirtualCompanion_SETUP.md`: instalación reproducible, descarga del modelo y ejecución de pruebas.
 - `docs/SETUP.md`: corrección de la ruta de dependencias y comandos de prueba.
 - Verificada la compatibilidad de MediaPipe 1.1.1 con Python 3.13 y la carga del modelo sin cámara.
+- `vision/src/face_tracker.py`: detección de pérdida de rostro por ausencia de landmarks o por resultados obsoletos (0.5 s); pausa y reanudación de la calibración y de la detección de parpadeos.
+- `vision/src/ear_calibrator.py`: `pause()`/`resume()` para excluir del tiempo de calibración los periodos sin rostro.
+- `vision/src/blink_detector.py`: `pause()`/`resume()` para excluir los periodos sin rostro de las métricas temporales.
+- `README.md`: documentación del comportamiento ante pérdida de rostro.
 
 ### Fixed
 
 - `vision/src/blink_detector.py`: corrección de la codificación de los docstrings (mojibake) y eliminación del BOM, preservando la lógica y las pruebas existentes.
+- `vision/src/face_tracker.py`: los landmarks incompletos o los resultados obsoletos se tratan como ausencia de rostro, no como ojos cerrados.
+- `vision/src/blink_detector.py`: un cierre ocular interrumpido por la pérdida de rostro ya no se contabiliza como parpadeo.
 
 ## [0.1.0] - 2026-09-18
 

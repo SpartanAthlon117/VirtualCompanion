@@ -26,6 +26,7 @@ def test_initial_state():
     assert detector.get_average_closed_duration() is None
     assert detector.get_blink_rate_per_minute() == 0.0
     assert detector.get_time_since_last_blink() is None
+    assert detector.is_paused() is False
 
 def test_detects_completed_blink(clock):
     detector = BlinkDetector()
@@ -106,6 +107,82 @@ def test_rejects_invalid_eye_state():
 
     with pytest.raises(ValueError):
         detector.update("UNKNOWN")
+
+
+def test_pause_does_not_count_interrupted_blink(clock):
+    detector = BlinkDetector()
+
+    detector.update(BlinkDetector.OPEN)
+    detector.update(BlinkDetector.CLOSED)
+    clock(0.5)
+
+    detector.pause()
+
+    assert detector.is_paused() is True
+
+    clock(5.0)
+    detector.resume()
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.is_blink() is False
+    assert detector.get_blink_count() == 0
+    assert detector.get_last_closed_duration() is None
+
+
+def test_pause_excludes_face_loss_time_from_blink_rate(clock):
+    detector = BlinkDetector(analysis_window_seconds=60.0)
+
+    detector.update(BlinkDetector.OPEN)
+    clock(10.0)
+    detector.update(BlinkDetector.CLOSED)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.get_blink_rate_per_minute() == pytest.approx(6.0)
+
+    detector.pause()
+    clock(60.0)
+    detector.resume()
+
+    assert detector.get_blink_rate_per_minute() == pytest.approx(6.0)
+
+    clock(10.0)
+
+    assert detector.get_blink_rate_per_minute() == pytest.approx(3.0)
+
+
+def test_update_is_ignored_while_paused(clock):
+    detector = BlinkDetector()
+
+    detector.update(BlinkDetector.OPEN)
+    detector.pause()
+
+    clock(1.0)
+    detector.update(BlinkDetector.CLOSED)
+
+    clock(1.0)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.get_blink_count() == 0
+    assert detector.is_blink() is False
+
+
+def test_reset_clears_pause_state(clock):
+    detector = BlinkDetector()
+
+    detector.pause()
+
+    assert detector.is_paused() is True
+
+    detector.reset()
+
+    assert detector.is_paused() is False
+
+    detector.update(BlinkDetector.OPEN)
+    clock(1.0)
+    detector.update(BlinkDetector.CLOSED)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.get_blink_count() == 1
 
 
 @pytest.mark.parametrize("window", [0, -1, -60])

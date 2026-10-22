@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from face_metrics import eye_aspect_ratio
+from face_presence import is_face_present
 from ear_calibrator import EARCalibrator
 # Incorporación de la clase EyeStateClassifier
 # para el control de los ojos.
@@ -63,6 +64,8 @@ def main():
     # y el hilo principal.
     latest_result = {
         "face_detected": False,
+        "result_received_at": None,
+        "result_id": 0,
         "left_ear": 0.0,
         "right_ear": 0.0,
         "average_ear": 0.0,
@@ -83,11 +86,14 @@ def main():
 
     blink_detector = BlinkDetector()
 
+    landmark_error_reported = False
+
     def on_face_landmarker_result(
         result,
         output_image,
         timestamp_ms,
     ):
+        nonlocal landmark_error_reported
         del output_image
         del timestamp_ms
 
@@ -98,46 +104,64 @@ def main():
         landmarks = []
 
         if result.face_landmarks:
-            face_detected = True
+            try:
+                # Obtener el primer rostro detectado.
+                face = result.face_landmarks[0]
 
-            # Obtener el primer rostro detectado.
-            face = result.face_landmarks[0]
+                # Obtener los seis puntos necesarios
+                # para cada ojo.
+                left_eye = [
+                    (
+                        face[index].x,
+                        face[index].y,
+                    )
+                    for index in LEFT_EYE_POINTS
+                ]
 
-            # Obtener los seis puntos necesarios
-            # para cada ojo.
-            left_eye = [
-                (
-                    face[index].x,
-                    face[index].y,
-                )
-                for index in LEFT_EYE_POINTS
-            ]
+                right_eye = [
+                    (
+                        face[index].x,
+                        face[index].y,
+                    )
+                    for index in RIGHT_EYE_POINTS
+                ]
 
-            right_eye = [
-                (
-                    face[index].x,
-                    face[index].y,
-                )
-                for index in RIGHT_EYE_POINTS
-            ]
+                # Calcular EAR de ambos ojos.
+                left_ear = eye_aspect_ratio(left_eye)
+                right_ear = eye_aspect_ratio(right_eye)
 
-            # Calcular EAR de ambos ojos.
-            left_ear = eye_aspect_ratio(left_eye)
-            right_ear = eye_aspect_ratio(right_eye)
+                # EAR promedio.
+                average_ear = (
+                    left_ear + right_ear
+                ) / 2.0
 
-            # EAR promedio.
-            average_ear = (
-                left_ear + right_ear
-            ) / 2.0
+                # Copiar los landmarks como datos simples.
+                landmarks = [
+                    (
+                        landmark.x,
+                        landmark.y,
+                    )
+                    for landmark in face
+                ]
 
-            # Copiar los landmarks como datos simples.
-            landmarks = [
-                (
-                    landmark.x,
-                    landmark.y,
-                )
-                for landmark in face
-            ]
+                face_detected = True
+                landmark_error_reported = False
+
+            except (IndexError, ValueError) as error:
+                # Landmarks incompletos o degenerados: se trata
+                # como ausencia de rostro, no como ojos cerrados.
+                face_detected = False
+                left_ear = 0.0
+                right_ear = 0.0
+                average_ear = 0.0
+                landmarks = []
+
+                if not landmark_error_reported:
+                    print(
+                        "ADVERTENCIA | Landmarks faciales inválidos: "
+                        f"{error}. Se ignora el frame."
+                    )
+                    landmark_error_reported = True
 
         # Actualizar el último resultado disponible.
         with result_lock:
@@ -146,6 +170,8 @@ def main():
             latest_result["right_ear"] = right_ear
             latest_result["average_ear"] = average_ear
             latest_result["landmarks"] = landmarks
+            latest_result["result_received_at"] = time.monotonic()
+            latest_result["result_id"] += 1
 
     try:
         with create_face_landmarker(
@@ -168,6 +194,9 @@ def main():
             calibration_start = time.monotonic()
 
             last_timestamp_ms = 0
+            face_was_present = False
+            last_result_id = 0
+            last_eye_state = None
 
             while True:
                 success, frame = camera.read()
@@ -211,8 +240,14 @@ def main():
 
                 # Obtener el último resultado disponible.
                 with result_lock:
+                    result_id = latest_result["result_id"]
+
                     face_detected = (
                         latest_result["face_detected"]
+                    )
+
+                    result_received_at = (
+                        latest_result["result_received_at"]
                     )
 
                     left_ear = (
@@ -231,17 +266,52 @@ def main():
                         latest_result["landmarks"].copy()
                     )
 
+                now = time.monotonic()
+
+                face_present = is_face_present(
+                    face_detected,
+                    result_received_at,
+                    now,
+                )
+
+                new_result = result_id != last_result_id
+                if new_result:
+                    last_result_id = result_id
+
+                # Pausar o reanudar los componentes temporales
+                # según la presencia real del rostro.
+                if face_present:
+                    calibrator.resume()
+                    blink_detector.resume()
+                else:
+                    calibrator.pause()
+                    blink_detector.pause()
+                    last_eye_state = None
+
+                if face_present and not face_was_present:
+                    print(
+                        "Rostro detectado. "
+                        "Reanudando calibración y detección."
+                    )
+                elif not face_present and face_was_present:
+                    print(
+                        "Rostro no detectado. "
+                        "Pausando calibración y detección."
+                    )
+
+                face_was_present = face_present
+
                 # ============================================================
                 # ACTUALIZAR CALIBRACIÓN
                 # ============================================================
-                if face_detected:
+                eye_state = None
+
+                if face_present and new_result:
                     elapsed = (
                         time.monotonic() - calibration_start
                     )
 
                     calibrator.update(average_ear)
-
-                    eye_state = None
 
                     if calibrator.is_completed():
                         reference_ear = calibrator.get_reference_ear()
@@ -261,6 +331,7 @@ def main():
                             )
 
                             blink_detector.update(eye_state)
+                            last_eye_state = eye_state
 
                             if blink_detector.is_blink():
                                 closed_duration = (
@@ -305,22 +376,34 @@ def main():
                         f"CALIBRANDO | "
                         f"Progreso: {progress:.0f}% | "
                         f"Muestras: {sample_count} | "
+                        f"Pausada: {calibrator.is_paused()} | "
                         f"EAR: {current_ear}"
                     )
 
+                    if face_present:
+                        calibration_title = "CALIBRANDO EAR..."
+                        calibration_help = (
+                            "Mantén los ojos abiertos por favor"
+                        )
+                        calibration_color = (0, 255, 255)
+                    else:
+                        calibration_title = "CALIBRACION EN PAUSA"
+                        calibration_help = "Acerca el rostro a la camara"
+                        calibration_color = (0, 0, 255)
+
                     cv2.putText(
                         frame,
-                        "CALIBRANDO EAR...",
+                        calibration_title,
                         (20, 170),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.8,
-                        (0, 255, 255),
+                        calibration_color,
                         2,
                     )
 
                     cv2.putText(
                         frame,
-                        "Mantén los ojos abiertos por favor",
+                        calibration_help,
                         (20, 200),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7,
@@ -375,10 +458,10 @@ def main():
                             2,
                         )
 
-                        if eye_state is not None:
+                        if face_present and last_eye_state is not None:
                             cv2.putText(
                                 frame,
-                                f"Ojos: {eye_state}",
+                                f"Ojos: {last_eye_state}",
                                 (20, 200),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.7,
@@ -390,7 +473,7 @@ def main():
                 # MOSTRAR ESTADO DEL ROSTRO
                 # ============================================================
 
-                if face_detected:
+                if face_present:
                     # Dibujar los landmarks del rostro.
                     for (
                         x_normalized,

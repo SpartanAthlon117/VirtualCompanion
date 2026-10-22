@@ -37,6 +37,7 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Cálculo de la duración promedio de los cierres oculares.
 * Cálculo de la frecuencia de parpadeo dentro de una ventana temporal de análisis.
 * Registro del tiempo transcurrido desde el último parpadeo detectado.
+* Pausa y reanudación de la calibración y de la detección de parpadeos ante la pérdida del rostro.
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
 
@@ -57,6 +58,12 @@ La lógica del detector cuenta los parpadeos completados mediante la transición
 También se conserva de manera independiente el instante del último parpadeo para poder calcular el tiempo transcurrido desde ese evento, incluso cuando el parpadeo ya se encuentra fuera de la ventana de análisis.
 
 Estas métricas constituyen indicadores temporales que posteriormente podrán utilizarse en el análisis de patrones asociados a la fatiga. En esta etapa no se utilizan todavía para determinar por sí solas un estado de fatiga.
+
+### Pérdida de rostro
+
+Si MediaPipe deja de detectar el rostro o no entrega resultados nuevos durante 0.5 segundos, la calibración y la detección de parpadeos se pausan. La ausencia de landmarks no se interpreta como ojos cerrados. Al recuperar el rostro, ambos componentes se reanudan y se descarta cualquier cierre ocular que haya quedado interrumpido.
+
+El tiempo máximo sin resultados nuevos se define en `vision/src/face_presence.py` mediante `FACE_LOSS_TIMEOUT_SECONDS`.
 
 ## Instalación y ejecución
 

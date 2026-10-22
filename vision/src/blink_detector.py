@@ -29,7 +29,9 @@ class BlinkDetector:
 
         self.analysis_window_seconds = analysis_window_seconds
         self.observation_start_time = None
-        
+        self.paused_at = None
+        self.total_paused_duration = 0.0
+
         self.previous_state = None
         self.blink_detected = False
         self.blink_count = 0
@@ -43,6 +45,55 @@ class BlinkDetector:
         self.total_closed_duration = 0.0
         self.completed_blinks = 0
 
+    def _now(self):
+        """
+        Devuelve el tiempo efectivo de observación, excluyendo
+        los periodos en los que el rostro no estuvo presente.
+        """
+
+        if self.paused_at is not None:
+            return (
+                self.paused_at
+                - self.total_paused_duration
+            )
+
+        return (
+            time.monotonic()
+            - self.total_paused_duration
+        )
+
+    def pause(self):
+        """
+        Pausa la detección y descarta el cierre ocular en curso.
+
+        Los parpadeos ya contabilizados se conservan. El tiempo
+        pausado no se incluye en las métricas temporales.
+        """
+
+        if self.paused_at is not None:
+            return
+
+        self.paused_at = time.monotonic()
+        self.previous_state = None
+        self.closed_start_time = None
+        self.blink_detected = False
+
+    def resume(self):
+        """Reanuda la detección tras una pausa."""
+
+        if self.paused_at is None:
+            return
+
+        self.total_paused_duration += (
+            time.monotonic() - self.paused_at
+        )
+        self.paused_at = None
+
+    def is_paused(self):
+        """Indica si la detección está pausada."""
+
+        return self.paused_at is not None
+
     def update(self, eye_state):
         """
         Actualiza el detector con el estado actual de los ojos.
@@ -53,6 +104,8 @@ class BlinkDetector:
 
         También se mide cuánto tiempo permanecieron cerrados
         los ojos entre CLOSED y OPEN.
+
+        Si el detector está pausado, la actualización se ignora.
         """
 
         self.blink_detected = False
@@ -65,8 +118,11 @@ class BlinkDetector:
                 "El estado ocular debe ser OPEN o CLOSED."
             )
 
-        current_time = time.monotonic()
-        
+        if self.paused_at is not None:
+            return
+
+        current_time = self._now()
+
         if self.observation_start_time is None:
             self.observation_start_time = current_time
 
@@ -161,9 +217,11 @@ class BlinkDetector:
 
         Utiliza el tiempo observado mientras la ventana configurada
         aún no se ha completado. Después, utiliza la ventana móvil.
+        Los periodos sin rostro (pausas) se excluyen del tiempo de
+        observación.
         """
 
-        current_time = time.monotonic()
+        current_time = self._now()
 
         self._remove_expired_timestamps(current_time)
 
@@ -192,7 +250,9 @@ class BlinkDetector:
     def get_time_since_last_blink(self):
         """
         Devuelve el tiempo desde el último parpadeo completado.
-        
+
+        Los periodos sin rostro (pausas) no se incluyen.
+
         Devuelve None si todavía no se ha detectado ningún
         parpadeo.
         """
@@ -200,7 +260,7 @@ class BlinkDetector:
         if self.last_blink_time is None:
             return None
 
-        current_time = time.monotonic()
+        current_time = self._now()
 
         return current_time - self.last_blink_time
 
@@ -208,6 +268,8 @@ class BlinkDetector:
         """Reinicia completamente el detector y sus métricas."""
 
         self.observation_start_time = None
+        self.paused_at = None
+        self.total_paused_duration = 0.0
 
         self.previous_state = None
         self.blink_detected = False
