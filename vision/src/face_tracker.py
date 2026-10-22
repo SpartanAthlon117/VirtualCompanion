@@ -12,6 +12,7 @@ from ear_calibrator import EARCalibrator
 # para el control de los ojos.
 from eye_state import EyeStateClassifier
 from blink_detector import BlinkDetector
+from overlay_metrics import build_metrics_lines
 
 
 MODEL_PATH = (
@@ -383,7 +384,7 @@ def main():
                     if face_present:
                         calibration_title = "CALIBRANDO EAR..."
                         calibration_help = (
-                            "Mantén los ojos abiertos por favor"
+                            "Ojos abiertos, por favor"
                         )
                         calibration_color = (0, 255, 255)
                     else:
@@ -468,6 +469,94 @@ def main():
                                 (255, 255, 255),
                                 2,
                             )
+
+                        if eye_classifier.get_reference_ear() is not None:
+                            blink_count = blink_detector.get_blink_count()
+                            last_closed_duration = (
+                                blink_detector.get_last_closed_duration()
+                            )
+                            average_closed_duration = (
+                                blink_detector.get_average_closed_duration()
+                            )
+                            blink_rate_per_minute = (
+                                blink_detector.get_blink_rate_per_minute()
+                            )
+                            time_since_last_blink = (
+                                blink_detector.get_time_since_last_blink()
+                            )
+                            metrics_paused = blink_detector.is_paused()
+
+                            metrics_lines = build_metrics_lines(
+                                blink_count=blink_count,
+                                last_closed_duration=(
+                                    last_closed_duration
+                                ),
+                                average_closed_duration=(
+                                    average_closed_duration
+                                ),
+                                blink_rate_per_minute=(
+                                    blink_rate_per_minute
+                                ),
+                                time_since_last_blink=(
+                                    time_since_last_blink
+                                ),
+                                paused=metrics_paused,
+                            )
+
+                            metrics_start_y = 240
+                            metrics_line_height = 30
+
+                            for index, text in enumerate(
+                                metrics_lines
+                            ):
+                                is_status_line = (
+                                    index
+                                    == len(metrics_lines) - 1
+                                )
+
+                                if is_status_line:
+                                    color = (
+                                        (0, 255, 255)
+                                        if metrics_paused
+                                        else (0, 255, 0)
+                                    )
+                                else:
+                                    color = (255, 255, 255)
+
+                                cv2.putText(
+                                    frame,
+                                    text,
+                                    (
+                                        20,
+                                        metrics_start_y
+                                        + index
+                                        * metrics_line_height,
+                                    ),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.6,
+                                    color,
+                                    2,
+                                )
+                    else:
+                        cv2.putText(
+                            frame,
+                            "Calibracion sin muestras validas",
+                            (20, 170),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            (0, 0, 255),
+                            2,
+                        )
+
+                        cv2.putText(
+                            frame,
+                            "Reinicia la aplicacion para calibrar",
+                            (20, 200),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2,
+                        )
 
                 # ============================================================
                 # MOSTRAR ESTADO DEL ROSTRO

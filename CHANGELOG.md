@@ -15,6 +15,9 @@
 * `vision/tests/test_blink_detector.py`: incorporación de 13 pruebas automatizadas para verificar el comportamiento del detector de parpadeos y sus métricas temporales.
 * `vision/src/face_presence.py` con `is_face_present()` y el tiempo máximo `FACE_LOSS_TIMEOUT_SECONDS`.
 * Pruebas automatizadas para el calibrador EAR, la presencia de rostro y la pausa del detector de parpadeos.
+* `vision/src/overlay_metrics.py` con el formato de las métricas de parpadeo para el overlay.
+* `vision/tests/test_overlay_metrics.py`: pruebas del formato de las métricas del overlay.
+* `vision/tests/test_face_metrics.py` y `vision/tests/test_eye_state.py`: pruebas del cálculo del EAR, validación de entradas y clasificación ocular.
 
 ### Changed
 
@@ -41,6 +44,9 @@
 - `vision/src/ear_calibrator.py`: `pause()`/`resume()` para excluir del tiempo de calibración los periodos sin rostro.
 - `vision/src/blink_detector.py`: `pause()`/`resume()` para excluir los periodos sin rostro de las métricas temporales.
 - `README.md`: documentación del comportamiento ante pérdida de rostro.
+- `vision/src/face_tracker.py`: visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia y tiempo desde el último parpadeo, con indicador de métricas activas o en pausa.
+- `README.md`: documentación de las métricas del overlay y actualización de las próximas etapas.
+- `vision/src/face_tracker.py`: mensaje explícito cuando la calibración termina sin muestras válidas.
 
 ### Fixed
 

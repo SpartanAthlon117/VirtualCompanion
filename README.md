@@ -38,6 +38,7 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Cálculo de la frecuencia de parpadeo dentro de una ventana temporal de análisis.
 * Registro del tiempo transcurrido desde el último parpadeo detectado.
 * Pausa y reanudación de la calibración y de la detección de parpadeos ante la pérdida del rostro.
+* Visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia y tiempo desde el último parpadeo.
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
 
@@ -64,6 +65,12 @@ Estas métricas constituyen indicadores temporales que posteriormente podrán ut
 Si MediaPipe deja de detectar el rostro o no entrega resultados nuevos durante 0.5 segundos, la calibración y la detección de parpadeos se pausan. La ausencia de landmarks no se interpreta como ojos cerrados. Al recuperar el rostro, ambos componentes se reanudan y se descarta cualquier cierre ocular que haya quedado interrumpido.
 
 El tiempo máximo sin resultados nuevos se define en `vision/src/face_presence.py` mediante `FACE_LOSS_TIMEOUT_SECONDS`.
+
+### Métricas en el overlay
+
+Después de completar la calibración, el overlay muestra el número total de parpadeos, la duración del último cierre, la duración promedio de los cierres, la frecuencia estimada y el tiempo transcurrido desde el último parpadeo. Los valores `--` indican que todavía no existe información suficiente.
+
+Cuando el rostro no está presente, las métricas se congelan y el overlay indica `Metricas en pausa (sin rostro)`. El texto gráfico utiliza caracteres ASCII para evitar problemas de representación con las fuentes de OpenCV.
 
 ## Instalación y ejecución
 
@@ -97,6 +104,8 @@ Desde la raíz del repositorio:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
+La suite incluye pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, formato del overlay y clasificación ocular.
+
 ## Estructura
 
 * `vision/` — visión por computadora y detección de indicadores de fatiga.
@@ -111,9 +120,8 @@ Desde la raíz del repositorio:
 
 Las siguientes etapas contemplan:
 
-1. Integración de las métricas de parpadeo en el seguimiento facial en tiempo real.
-2. Estabilización y validación de las métricas de frecuencia y duración de los parpadeos.
-3. Detección de indicadores de fatiga.
-4. Máquina de estados de fatiga.
-5. Integración con el acompañante virtual.
-6. Integración de la interfaz 3D mediante Unity.
+1. Estabilización y validación de las métricas de frecuencia y duración de los parpadeos.
+2. Detección de indicadores de fatiga.
+3. Máquina de estados de fatiga.
+4. Integración con el acompañante virtual.
+5. Integración de la interfaz 3D mediante Unity.
