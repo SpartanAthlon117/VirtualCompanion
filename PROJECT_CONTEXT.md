@@ -4,7 +4,7 @@ VirtualCompanion es un prototipo académico y experimental para el monitoreo de 
 
 ## Alcance implementado
 
-Actualmente el único módulo funcional es `vision/`: captura de webcam, MediaPipe Face Landmarker, cálculo del EAR, calibración, clasificación `OPEN`/`CLOSED`, detección de parpadeos, métricas temporales, manejo de pérdida de rostro y overlay.
+Actualmente el único módulo funcional es `vision/`: captura de webcam, MediaPipe Face Landmarker, cálculo del EAR, calibración, clasificación `OPEN`/`CLOSED`, detección de parpadeos, detección de cierres prolongados, métricas temporales, manejo de pérdida de rostro y overlay.
 
 ## Documentos canónicos
 

@@ -12,6 +12,7 @@ from ear_calibrator import EARCalibrator
 # para el control de los ojos.
 from eye_state import EyeStateClassifier
 from blink_detector import BlinkDetector
+from eye_closure import ProlongedClosureDetector
 from overlay_metrics import build_metrics_lines
 
 
@@ -86,6 +87,7 @@ def main():
     )
 
     blink_detector = BlinkDetector()
+    closure_detector = ProlongedClosureDetector()
 
     landmark_error_reported = False
 
@@ -284,9 +286,11 @@ def main():
                 if face_present:
                     calibrator.resume()
                     blink_detector.resume()
+                    closure_detector.resume()
                 else:
                     calibrator.pause()
                     blink_detector.pause()
+                    closure_detector.pause()
                     last_eye_state = None
 
                 if face_present and not face_was_present:
@@ -333,6 +337,27 @@ def main():
 
                             blink_detector.update(eye_state)
                             last_eye_state = eye_state
+
+                            prolonged_event = (
+                                closure_detector.update(eye_state)
+                            )
+
+                            if prolonged_event:
+                                current_duration = (
+                                    closure_detector.get_current_closed_duration()
+                                )
+                                if current_duration is None:
+                                    current_duration = (
+                                        closure_detector.get_last_prolonged_duration()
+                                    )
+                                if current_duration is None:
+                                    current_duration = 0.0
+                                print(
+                                    "EVENTO | Cierre prolongado "
+                                    "detectado | "
+                                    f"Duracion registrada: "
+                                    f"{current_duration:.3f}s"
+                                )
 
                             if blink_detector.is_blink():
                                 closed_duration = (
@@ -486,6 +511,19 @@ def main():
                             )
                             metrics_paused = blink_detector.is_paused()
 
+                            current_closed_duration = (
+                                closure_detector.get_current_closed_duration()
+                            )
+                            prolonged_closure_count = (
+                                closure_detector.get_prolonged_count()
+                            )
+                            prolonged_active = (
+                                closure_detector.is_prolonged()
+                            )
+                            prolonged_threshold_seconds = (
+                                closure_detector.get_threshold_seconds()
+                            )
+
                             metrics_lines = build_metrics_lines(
                                 blink_count=blink_count,
                                 last_closed_duration=(
@@ -501,10 +539,20 @@ def main():
                                     time_since_last_blink
                                 ),
                                 paused=metrics_paused,
+                                current_closed_duration=(
+                                    current_closed_duration
+                                ),
+                                prolonged_closure_count=(
+                                    prolonged_closure_count
+                                ),
+                                prolonged_threshold_seconds=(
+                                    prolonged_threshold_seconds
+                                ),
+                                prolonged_active=prolonged_active,
                             )
 
-                            metrics_start_y = 240
-                            metrics_line_height = 30
+                            metrics_start_y = 230
+                            metrics_line_height = 28
 
                             for index, text in enumerate(
                                 metrics_lines
@@ -520,6 +568,13 @@ def main():
                                         if metrics_paused
                                         else (0, 255, 0)
                                     )
+                                elif (
+                                    prolonged_active
+                                    and text.startswith(
+                                        "Cierre actual:"
+                                    )
+                                ):
+                                    color = (0, 0, 255)
                                 else:
                                     color = (255, 255, 255)
 

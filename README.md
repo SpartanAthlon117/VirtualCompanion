@@ -40,16 +40,17 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Detección de eventos de parpadeo mediante la transición `OPEN → CLOSED → OPEN`.
 * Medición de la duración de cada cierre ocular.
 * Cálculo de la duración promedio de los cierres oculares.
+* Detección de cierres oculares prolongados con umbral configurable y un evento por cierre.
 * Cálculo de la frecuencia de parpadeo dentro de una ventana temporal de análisis.
 * Registro del tiempo transcurrido desde el último parpadeo detectado.
-* Pausa y reanudación de la calibración y de la detección de parpadeos ante la pérdida del rostro.
-* Visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia y tiempo desde el último parpadeo.
+* Pausa y reanudación de la calibración, los parpadeos y los cierres prolongados ante la pérdida del rostro.
+* Visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia, tiempo desde el último parpadeo, cierre actual, cierres prolongados y umbral.
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
 
 El detector de parpadeos utiliza la secuencia temporal del estado ocular para identificar eventos de parpadeo y registra la duración del cierre ocular en segundos.
 
-La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esta medición permitirá posteriormente diferenciar parpadeos normales de cierres oculares prolongados.
+La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esa duración alimenta tanto el conteo de parpadeos como la detección de cierres prolongados.
 
 La duración del cierre ocular todavía no representa por sí sola una detección de fatiga. Será utilizada como uno de los indicadores dentro de las etapas posteriores del sistema.
 
@@ -59,23 +60,33 @@ El detector utiliza una ventana temporal de análisis configurable, cuyo valor p
 
 Este enfoque híbrido permite estimar la frecuencia sin esperar a que transcurra un minuto completo desde el inicio de la observación. Sin embargo, las estimaciones iniciales pueden variar considerablemente debido al reducido tiempo de observación y no deben interpretarse de manera aislada como evidencia de fatiga.
 
-La lógica del detector cuenta los parpadeos completados mediante la transición `OPEN → CLOSED → OPEN`. Por ello, un cierre ocular que continúa sin una reapertura todavía no se registra como un parpadeo completado. La detección de cierres prolongados y la generación de alertas por fatiga requieren lógica temporal adicional.
+La lógica del detector cuenta los parpadeos completados mediante la transición `OPEN → CLOSED → OPEN`. Por ello, un cierre ocular que continúa sin una reapertura todavía no se registra como un parpadeo completado.
 
 También se conserva de manera independiente el instante del último parpadeo para poder calcular el tiempo transcurrido desde ese evento, incluso cuando el parpadeo ya se encuentra fuera de la ventana de análisis.
 
 Estas métricas constituyen indicadores temporales que posteriormente podrán utilizarse en el análisis de patrones asociados a la fatiga. En esta etapa no se utilizan todavía para determinar por sí solas un estado de fatiga.
 
+### Cierres prolongados
+
+La detección de cierres prolongados utiliza un componente independiente. El umbral predeterminado es de `1.5 s`; es un valor **experimental y configurable**, no un umbral clínico validado.
+
+El evento se emite una sola vez cuando un cierre cruza el umbral. Mientras los ojos permanezcan cerrados no se repite, y al reabrir se registra la duración final. Si se pierde el rostro, el cierre en curso se descarta; si los ojos siguen cerrados al reanudar, comienza un nuevo conteo.
+
+Un cierre prolongado también se contabiliza como parpadeo completado por el detector actual. Esta iteración no modifica esa semántica; el nuevo componente solo añade el indicador de duración prolongada.
+
+La generación de alertas por fatiga requiere lógica adicional y no forma parte de esta etapa.
+
 ### Pérdida de rostro
 
-Si MediaPipe deja de detectar el rostro o no entrega resultados nuevos durante 0.5 segundos, la calibración y la detección de parpadeos se pausan. La ausencia de landmarks no se interpreta como ojos cerrados. Al recuperar el rostro, ambos componentes se reanudan y se descarta cualquier cierre ocular que haya quedado interrumpido.
+Si MediaPipe deja de detectar el rostro o no entrega resultados nuevos durante 0.5 segundos, la calibración, la detección de parpadeos y la detección de cierres prolongados se pausan. La ausencia de landmarks no se interpreta como ojos cerrados. Al recuperar el rostro, los componentes se reanudan y se descarta cualquier cierre ocular que haya quedado interrumpido.
 
 El tiempo máximo sin resultados nuevos se define en `vision/src/face_presence.py` mediante `FACE_LOSS_TIMEOUT_SECONDS`.
 
 ### Métricas en el overlay
 
-Después de completar la calibración, el overlay muestra el número total de parpadeos, la duración del último cierre, la duración promedio de los cierres, la frecuencia estimada y el tiempo transcurrido desde el último parpadeo. Los valores `--` indican que todavía no existe información suficiente.
+Después de completar la calibración, el overlay muestra el número total de parpadeos, la duración del último cierre, la duración promedio de los cierres, la frecuencia estimada, el tiempo transcurrido desde el último parpadeo, la duración del cierre actual, el número de cierres prolongados y el umbral configurado. Los valores `--` indican que todavía no existe información suficiente.
 
-Cuando el rostro no está presente, las métricas se congelan y el overlay indica `Metricas en pausa (sin rostro)`. El texto gráfico utiliza caracteres ASCII para evitar problemas de representación con las fuentes de OpenCV.
+Cuando un cierre supera el umbral, la línea del cierre actual muestra `[PROLONGADO]` y cambia de color; el texto se conserva para no depender únicamente del color. Cuando el rostro no está presente, las métricas se congelan y el overlay indica `Metricas en pausa (sin rostro)`. El texto gráfico utiliza caracteres ASCII para evitar problemas de representación con las fuentes de OpenCV.
 
 ## Instalación y ejecución
 
@@ -109,7 +120,9 @@ Desde la raíz del repositorio:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-La suite incluye 57 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, formato del overlay y clasificación ocular.
+La suite incluye 74 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, cierres prolongados, formato del overlay y clasificación ocular.
+
+La integración continua no cubre la cámara. La validación funcional de M1 es manual, no guarda imágenes y se registra en `docs/PROJECT_STATUS.md`; si se acumulan resultados, se valorará un documento específico de validación.
 
 ## Calidad y CI
 
@@ -129,7 +142,7 @@ La verificación actual es funcional y sintáctica. No se ha adoptado todavía u
 ## Estructura
 
 * `vision/` — módulo de visión por computadora.
-  * `vision/src/` — captura, métricas, calibración, clasificación, parpadeos y overlay.
+  * `vision/src/` — captura, métricas, calibración, clasificación, parpadeos, cierres prolongados y overlay.
   * `vision/tests/` — pruebas automatizadas.
 * `data/` — estructura para datos experimentales; actualmente solo contiene archivos `.gitkeep`.
 * `docs/` — documentación técnica, estado y guía de entorno.
@@ -140,8 +153,8 @@ La verificación actual es funcional y sintáctica. No se ha adoptado todavía u
 
 Las siguientes etapas contemplan:
 
-1. Estabilización y validación de las métricas de frecuencia y duración de los parpadeos.
-2. Detección de indicadores de fatiga.
-3. Máquina de estados de fatiga.
-4. Integración con el acompañante virtual.
-5. Integración de la interfaz 3D mediante Unity.
+1. Validación funcional de M1 con cámara: calibración, parpadeos, cierres prolongados y pérdida de rostro.
+2. Cálculo de la proporción de tiempo con ojos cerrados (PERCLOS simplificado).
+3. Integración de indicadores y máquina de estados de fatiga.
+4. Generación de alertas.
+5. Integración con el acompañante virtual y la interfaz 3D mediante Unity.

@@ -19,6 +19,9 @@
 * `vision/tests/test_overlay_metrics.py`: pruebas del formato de las métricas del overlay.
 * `vision/tests/test_face_metrics.py` y `vision/tests/test_eye_state.py`: pruebas del cálculo del EAR, validación de entradas y clasificación ocular.
 * `.github/workflows/ci.yml`: integración continua en Windows/Python 3.13 con `pip check`, `compileall` y `pytest`.
+* `vision/src/eye_closure.py`: detección de cierres prolongados con umbral configurable y un evento por cierre.
+* `vision/tests/test_eye_closure.py`: pruebas de umbral, evento único, reapertura, pausa, reanudación, reinicio y entradas inválidas.
+* Overlay de cierre actual, cierres prolongados y umbral, con etiqueta `[PROLONGADO]` cuando corresponde.
 
 ### Changed
 
@@ -54,6 +57,12 @@
 - `docs/PROJECT_STATUS.md`: estado actualizado a M1, con limitaciones y pendientes.
 - `PROJECT_CONTEXT.md`: contexto breve y enlaces a documentos canónicos.
 - CI inicial limitada a dependencias, compilación y pruebas; linter y formatter diferidos.
+- `vision/src/face_tracker.py`: integración del detector de cierres prolongados, pausa/reanudación ante pérdida de rostro y ajuste del espacio del overlay.
+- `vision/src/overlay_metrics.py`: líneas opcionales para cierre actual, cierres prolongados y umbral, manteniendo compatibilidad con las llamadas anteriores.
+- `README.md`: documentación de cierres prolongados, semántica del evento, carácter experimental del umbral y enfoque de validación.
+- `PROJECT_CONTEXT.md`: alcance de M1 actualizado con la detección de cierres prolongados.
+- `docs/PROJECT_STATUS.md`: estado actualizado, smoke test técnico de cámara y criterio para documentar la validación funcional.
+- `MEMORY.md`: estado, decisiones y siguientes pasos de la iteración.
 
 ### Fixed
 

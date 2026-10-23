@@ -46,12 +46,18 @@ def build_metrics_lines(
     blink_rate_per_minute,
     time_since_last_blink,
     paused,
+    current_closed_duration=None,
+    prolonged_closure_count=0,
+    prolonged_threshold_seconds=None,
+    prolonged_active=False,
 ):
     """
     Construye las líneas de texto del overlay de métricas.
 
     Devuelve cadenas sin formato gráfico para mantener separada
-    la presentación del cálculo de las métricas.
+    la presentación del cálculo de las métricas. Las métricas de
+    cierre prolongado son opcionales para conservar la
+    compatibilidad con llamadas anteriores.
     """
 
     status = (
@@ -60,7 +66,7 @@ def build_metrics_lines(
         else "Metricas activas"
     )
 
-    return [
+    lines = [
         f"Parpadeos: {blink_count}",
         f"Ultimo cierre: {format_duration(last_closed_duration)}",
         (
@@ -75,5 +81,33 @@ def build_metrics_lines(
             "Desde ultimo parpadeo: "
             f"{format_time_since_last_blink(time_since_last_blink)}"
         ),
-        status,
     ]
+
+    if prolonged_threshold_seconds is not None:
+        current_text = format_duration(
+            current_closed_duration
+        )
+
+        if (
+            prolonged_active
+            and current_closed_duration is not None
+        ):
+            current_text = f"{current_text} [PROLONGADO]"
+
+        lines.extend(
+            [
+                f"Cierre actual: {current_text}",
+                (
+                    "Cierres prolongados: "
+                    f"{prolonged_closure_count}"
+                ),
+                (
+                    "Umbral cierre: "
+                    f"{format_duration(prolonged_threshold_seconds)}"
+                ),
+            ]
+        )
+
+    lines.append(status)
+
+    return lines
