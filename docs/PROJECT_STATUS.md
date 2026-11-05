@@ -2,7 +2,7 @@
 
 ## Fecha
 
-2026-10-23
+2026-11-03
 
 ## Hito actual
 
@@ -23,18 +23,21 @@
 - Cálculo de la frecuencia de parpadeo con ventana temporal configurable.
 - Registro del tiempo transcurrido desde el último parpadeo.
 - Pausa y reanudación ante pérdida de rostro, sin interpretar la ausencia como ojos cerrados.
-- Overlay con parpadeos totales, último cierre, cierre promedio, frecuencia, tiempo desde el último parpadeo, cierre actual, cierres prolongados y umbral.
-- Suite de **74 pruebas automatizadas** para métricas, calibración, presencia de rostro, parpadeos, cierres prolongados, overlay y clasificación ocular.
+- Overlay con parpadeos totales, último cierre, cierre promedio, frecuencia, tiempo desde el último parpadeo, PERCLOS, cierre actual, cierres prolongados y umbral.
+- Cálculo de PERCLOS simplificado (`vision/src/perclos.py`) con ventana móvil de 60 s, mínimo de 20 s de observación efectiva y pausa ante la pérdida de rostro, integrado en el flujo en vivo y el overlay.
+- Suite de **96 pruebas automatizadas** para métricas, calibración, presencia de rostro, parpadeos, cierres prolongados, PERCLOS, overlay y clasificación ocular.
 - Flujo de integración continua verificado en GitHub Actions con Windows y Python 3.13 (`pip check`, `compileall` y `pytest`); ejecución #1 concluida con éxito el 2026-10-23.
 - Documentación de entorno consolidada en `docs/SETUP.md`.
 
 ## Validación de M1
 
-- **Smoke test técnico (2026-10-23):** la cámara `0` abrió correctamente, se leyeron 20 frames, el modelo se cargó y 7 frames contuvieron un rostro. El EAR promedio observado fue `0.339`, con rango `0.283–0.396`. No se guardaron imágenes ni video.
-- **Alcance:** este smoke test verifica cámara, modelo y obtención de landmarks. No sustituye la validación funcional de calibración, parpadeos, cierres prolongados ni recuperación ante pérdida de rostro.
-- **Pendiente:** ejecutar una sesión guiada con una persona frente a la cámara y registrar resultados de calibración, parpadeos, cierres prolongados, pérdida de rostro, gafas, distancia e iluminación.
-- **Protocolo mínimo propuesto:** verificar cámara y modelo; calibrar con ojos abiertos; registrar 10 parpadeos; provocar 3 cierres superiores a 2 s; simular pérdida de rostro; repetir con gafas, dos distancias y dos condiciones de luz; anotar aciertos, falsos positivos, falsos negativos y limitaciones. No guardar imágenes.
-- **Registro recomendado:** mantener el estado y el protocolo en este documento. Cuando existan resultados completos, crear `docs/validation/M1.md` (o `docs/VALIDATION.md`) con fecha, entorno, escenarios, resultados y limitaciones. No crear el documento antes de tener evidencia para evitar documentación vacía o duplicada.
+- **Smoke test técnico en Linux (2026-11-02):** la cámara `0` abrió correctamente y se procesaron 164 frames en 12 s; los 164 contuvieron un rostro (100 %). La calibración completó con 61 muestras y un EAR de referencia de `0.417989`. Se observaron 85 estados `OPEN`, 4 `CLOSED`, 1 parpadeo incidental, 0 cierres prolongados y 0 pérdidas de rostro, con ~13.67 FPS. No se guardaron imágenes ni video.
+- **Prueba manual de PERCLOS en Linux (2026-11-03):** calibración completada con 59 muestras. PERCLOS apareció tras 20 s de observación efectiva, descendió con ojos abiertos (14.2 % a 12.5 %), aumentó durante un cierre de 0.936 s (12.5 % a 15.7 %) y respetó las pausas por pérdida de rostro. Se registraron 13 parpadeos y ningún cierre prolongado. El operador confirmó que la línea se ve sin problemas y que cubrir la cámara detiene los cálculos.
+- **Segunda prueba manual de PERCLOS (2026-11-04):** calibración completada con 54 muestras; la sesión terminó a los 30.18 s con PERCLOS en `--` porque las pausas impidieron acumular 20 s efectivos. La calibración (`Completada: True`, 54 muestras) y el contador de parpadeos (de 4 a 8) se conservaron tras las pérdidas de rostro; solo se reinició el cierre en curso, por diseño. No se produjeron errores.
+- **Smoke test técnico en Windows (2026-10-23):** 20 frames leídos, 7 con rostro, EAR promedio `0.339` y rango `0.283–0.396`. No se guardaron imágenes ni video.
+- **Alcance:** los smoke tests verifican cámara, modelo, landmarks, EAR, calibración y clasificación básica. No sustituyen la validación funcional controlada de parpadeos, cierres prolongados, recuperación ante pérdida de rostro, gafas, distancias e iluminación.
+- **Pendiente:** ejecutar el protocolo controlado con una persona frente a la cámara y repetirlo en Windows y Linux; registrar aciertos, falsos positivos, falsos negativos, FPS y latencia.
+- **Registro:** `docs/validation/M1.md` contiene el entorno, el procedimiento, los resultados reales y las limitaciones. No se deben añadir resultados no observados.
 
 ## Limitaciones
 
@@ -43,17 +46,19 @@
 - El umbral ocular actual (`0.70 × EAR de referencia`) es experimental.
 - El umbral de cierre prolongado (`1.5 s` por defecto) es experimental y configurable.
 - Un cierre prolongado también se contabiliza como parpadeo completado; la separación de ambas métricas queda para una etapa posterior.
+- El PERCLOS implementado es una versión simplificada basada en la proporción de tiempo con ojos cerrados; no aplica el criterio P80 ni ha sido validado para estimar fatiga.
+- La pérdida de rostro pausa el cálculo. En sesiones con pausas frecuentes, el mínimo de 20 s efectivos puede tardar más de lo esperado; conviene revisar el timeout de frescura y mostrar el tiempo de observación efectiva.
 - Solo se procesa un rostro.
 - La generación de alertas todavía no está implementada.
-- La validación funcional con cámara está pendiente; la integración continua ejecuta pruebas sin hardware.
+- La validación funcional controlada con cámara está pendiente; ya existe un smoke test técnico en Linux y un antecedente en Windows. La integración continua ejecuta pruebas sin hardware.
 - La verificación estática actual se limita a la compilación de sintaxis (`compileall`) y a la consistencia de dependencias (`pip check`); no incluye linter ni tipado.
 - No se ha adoptado todavía un linter o formatter porque el código existente no cuenta con una configuración acordada.
 - FastAPI, PostgreSQL, WebSocket, el avatar, la voz y Unity aún no están implementados.
 
 ## Pendiente
 
-- Validación funcional de M1 con cámara y registro de resultados.
-- Cálculo de la proporción de tiempo con ojos cerrados (PERCLOS simplificado).
+- Validación funcional controlada de M1 (parpadeos, cierres prolongados, pérdida de rostro, gafas, distancias e iluminación) en Windows y Linux.
+- Separación del motor de visión de la interfaz y configuración externa de umbrales y ventanas.
 - Estabilización y validación de las métricas de frecuencia y duración.
 - Integración de indicadores y máquina de estados de fatiga.
 - Generación de alertas.
@@ -64,7 +69,9 @@
 ## Documentos relacionados
 
 - `README.md`: punto de entrada y resumen del proyecto.
+- `docs/MVP_SCOPE.md`: alcance del MVP, decisiones, contratos y backlog.
 - `docs/SETUP.md`: guía canónica de entorno y ejecución.
+- `docs/validation/M1.md`: resultados del smoke test técnico y limitaciones.
 - `AGENTS.md`: reglas permanentes del proyecto.
 - `MEMORY.md`: memoria entre sesiones.
 - `CHANGELOG.md`: registro de cambios.

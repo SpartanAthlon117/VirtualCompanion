@@ -1,5 +1,5 @@
 """
-Formato de las métricas de parpadeo para el overlay.
+Formato de las métricas del overlay.
 
 Este módulo no depende de OpenCV ni del detector. Su única
 responsabilidad es convertir los valores numéricos en texto
@@ -39,6 +39,20 @@ def format_blink_rate(rate, blink_count):
     return f"{rate:.1f} parp./min"
 
 
+def format_perclos(value):
+    """
+    Formatea PERCLOS como porcentaje.
+
+    El cálculo devuelve una proporción entre 0.0 y 1.0. Si
+    todavía no hay datos suficientes, se muestra "--".
+    """
+
+    if value is None:
+        return "--"
+
+    return f"{value * 100:.1f} %"
+
+
 def build_metrics_lines(
     blink_count,
     last_closed_duration,
@@ -50,13 +64,15 @@ def build_metrics_lines(
     prolonged_closure_count=0,
     prolonged_threshold_seconds=None,
     prolonged_active=False,
+    perclos=None,
+    perclos_window_seconds=None,
 ):
     """
     Construye las líneas de texto del overlay de métricas.
 
     Devuelve cadenas sin formato gráfico para mantener separada
     la presentación del cálculo de las métricas. Las métricas de
-    cierre prolongado son opcionales para conservar la
+    cierre prolongado y PERCLOS son opcionales para conservar la
     compatibilidad con llamadas anteriores.
     """
 
@@ -82,6 +98,12 @@ def build_metrics_lines(
             f"{format_time_since_last_blink(time_since_last_blink)}"
         ),
     ]
+
+    if perclos_window_seconds is not None:
+        lines.append(
+            f"PERCLOS ({perclos_window_seconds:g} s): "
+            f"{format_perclos(perclos)}"
+        )
 
     if prolonged_threshold_seconds is not None:
         current_text = format_duration(

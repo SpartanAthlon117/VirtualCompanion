@@ -13,7 +13,11 @@ from ear_calibrator import EARCalibrator
 from eye_state import EyeStateClassifier
 from blink_detector import BlinkDetector
 from eye_closure import ProlongedClosureDetector
-from overlay_metrics import build_metrics_lines
+from overlay_metrics import (
+    build_metrics_lines,
+    format_perclos,
+)
+from perclos import PerclosCalculator
 
 
 MODEL_PATH = (
@@ -88,6 +92,7 @@ def main():
 
     blink_detector = BlinkDetector()
     closure_detector = ProlongedClosureDetector()
+    perclos_calculator = PerclosCalculator()
 
     landmark_error_reported = False
 
@@ -287,10 +292,12 @@ def main():
                     calibrator.resume()
                     blink_detector.resume()
                     closure_detector.resume()
+                    perclos_calculator.resume()
                 else:
                     calibrator.pause()
                     blink_detector.pause()
                     closure_detector.pause()
+                    perclos_calculator.pause()
                     last_eye_state = None
 
                 if face_present and not face_was_present:
@@ -310,6 +317,7 @@ def main():
                 # ACTUALIZAR CALIBRACIÓN
                 # ============================================================
                 eye_state = None
+                perclos_value = None
 
                 if face_present and new_result:
                     elapsed = (
@@ -337,6 +345,12 @@ def main():
 
                             blink_detector.update(eye_state)
                             last_eye_state = eye_state
+
+                            perclos_value = (
+                                perclos_calculator.update(
+                                    eye_state
+                                )
+                            )
 
                             prolonged_event = (
                                 closure_detector.update(eye_state)
@@ -376,7 +390,8 @@ def main():
                         f"Completada: {calibrator.is_completed()} | "
                         f"Muestras: {calibrator.get_sample_count()} | "
                         f"Ojos: {eye_state} | "
-                        f"Parpadeos: {blink_detector.get_blink_count()}"
+                        f"Parpadeos: {blink_detector.get_blink_count()} | "
+                        f"PERCLOS: {format_perclos(perclos_value)}"
                     )
 
                 # ============================================================
@@ -524,6 +539,10 @@ def main():
                                 closure_detector.get_threshold_seconds()
                             )
 
+                            perclos_value = (
+                                perclos_calculator.get_perclos()
+                            )
+
                             metrics_lines = build_metrics_lines(
                                 blink_count=blink_count,
                                 last_closed_duration=(
@@ -549,10 +568,14 @@ def main():
                                     prolonged_threshold_seconds
                                 ),
                                 prolonged_active=prolonged_active,
+                                perclos=perclos_value,
+                                perclos_window_seconds=(
+                                    perclos_calculator.get_window_seconds()
+                                ),
                             )
 
-                            metrics_start_y = 230
-                            metrics_line_height = 28
+                            metrics_start_y = 220
+                            metrics_line_height = 26
 
                             for index, text in enumerate(
                                 metrics_lines

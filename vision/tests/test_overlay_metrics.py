@@ -2,6 +2,7 @@ from vision.src.overlay_metrics import (
     build_metrics_lines,
     format_blink_rate,
     format_duration,
+    format_perclos,
     format_time_since_last_blink,
 )
 
@@ -20,6 +21,13 @@ def test_formats_blink_rate():
     assert format_blink_rate(12.34, 3) == "12.3 parp./min"
     assert format_blink_rate(0.0, 0) == "--"
     assert format_blink_rate(None, 3) == "--"
+
+
+def test_formats_perclos():
+    assert format_perclos(0.0) == "0.0 %"
+    assert format_perclos(0.423) == "42.3 %"
+    assert format_perclos(1.0) == "100.0 %"
+    assert format_perclos(None) == "--"
 
 
 def test_builds_lines_without_data():
@@ -125,3 +133,50 @@ def test_builds_prolonged_closure_lines_without_data():
     assert "Cierres prolongados: 2" in lines
     assert "Umbral cierre: 1.500 s" in lines
     assert lines[-1] == "Metricas en pausa (sin rostro)"
+
+
+def test_builds_perclos_line():
+    lines = build_metrics_lines(
+        blink_count=2,
+        last_closed_duration=0.25,
+        average_closed_duration=0.3,
+        blink_rate_per_minute=6.0,
+        time_since_last_blink=4.2,
+        paused=False,
+        perclos=0.423,
+        perclos_window_seconds=60.0,
+    )
+
+    assert "PERCLOS (60 s): 42.3 %" in lines
+    assert lines[-1] == "Metricas activas"
+
+
+def test_builds_perclos_line_without_data():
+    lines = build_metrics_lines(
+        blink_count=0,
+        last_closed_duration=None,
+        average_closed_duration=None,
+        blink_rate_per_minute=0.0,
+        time_since_last_blink=None,
+        paused=False,
+        perclos=None,
+        perclos_window_seconds=60,
+    )
+
+    assert "PERCLOS (60 s): --" in lines
+
+
+def test_omits_perclos_line_without_window():
+    lines = build_metrics_lines(
+        blink_count=0,
+        last_closed_duration=None,
+        average_closed_duration=None,
+        blink_rate_per_minute=0.0,
+        time_since_last_blink=None,
+        paused=False,
+        perclos=0.5,
+    )
+
+    assert not any(
+        line.startswith("PERCLOS") for line in lines
+    )

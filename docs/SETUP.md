@@ -1,10 +1,10 @@
 # Guía de entorno y ejecución
 
-Esta es la guía canónica para preparar y ejecutar VirtualCompanion. El entorno validado es **Windows con Python 3.13 (probado con 3.13.15)**. Los comandos de Linux se incluyen como referencia, pero no se han verificado en este repositorio.
+Esta es la guía canónica para preparar y ejecutar VirtualCompanion. **Windows con Python 3.13 (probado con 3.13.15)** es el entorno de referencia y de integración continua. En Linux se verificó parcialmente el 2026-11-02 un smoke test técnico (cámara, modelo, landmarks, EAR y calibración); la ejecución completa con ventana y la futura web aún no se han validado en Linux.
 
 ## 1. Requisitos
 
-- Windows (entorno validado) o Linux (referencia)
+- Windows (entorno de referencia) o Linux (compatibilidad verificada parcialmente)
 - Python 3.13.x
 - Git
 - Webcam para la ejecución en tiempo real
@@ -97,7 +97,9 @@ python vision/src/camera.py
 python vision/src/face_tracker.py
 ```
 
-`face_tracker.py` inicia la cámara, la calibración del EAR, la clasificación ocular, la detección de parpadeos y el overlay de métricas. Para salir, pulsa `q`, `ESC` o cierra la ventana. `camera.py` solo utiliza `q`.
+`face_tracker.py` inicia la cámara, la calibración del EAR, la clasificación ocular, la detección de parpadeos y cierres prolongados, el cálculo de PERCLOS y el overlay de métricas. Para salir, pulsa `q`, `ESC` o cierra la ventana. `camera.py` solo utiliza `q`.
+
+En Linux se verificaron cámara, modelo, MediaPipe, EAR y calibración mediante un smoke test sin ventana. La ejecución de `face_tracker.py` con interfaz gráfica no se validó en esa sesión. La web local, FastAPI y SQLite todavía no forman parte del código.
 
 ## 7. Ejecutar las pruebas
 
@@ -113,7 +115,7 @@ Las pruebas no requieren cámara. Ejecutar `pytest` desde `vision/` produce `Mod
 
 El flujo `.github/workflows/ci.yml` está configurado para Windows con Python 3.13. Instala las dependencias fijadas, verifica su consistencia con `pip check`, compila `vision/` con `compileall` y ejecuta `pytest`.
 
-La primera ejecución remota ocurrirá en el siguiente push a `master` o en un pull request. La integración continua no sustituye la validación con cámara.
+Linux todavía no forma parte de la matriz de CI. La ejecución remota verificada es la #1 del 2026-10-23. La integración continua no sustituye la validación con cámara.
 
 ## 9. Problemas comunes
 
@@ -136,7 +138,9 @@ Confirma que estás usando Python 3.13 y el intérprete de `.venv`. No instales 
 ## 10. Documentos relacionados
 
 - `README.md`: descripción, estado, instalación resumida y estructura.
+- `docs/MVP_SCOPE.md`: alcance del MVP, decisiones, contratos y backlog.
 - `docs/PROJECT_STATUS.md`: estado detallado, limitaciones y pendientes.
+- `docs/validation/M1.md`: smoke test técnico y limitaciones.
 - `AGENTS.md`: reglas permanentes del proyecto.
 - `MEMORY.md`: memoria entre sesiones.
 - `CHANGELOG.md`: registro de cambios.

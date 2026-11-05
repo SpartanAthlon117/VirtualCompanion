@@ -1,4 +1,4 @@
-﻿# ==============================
+# ==============================
 # Python
 # ==============================
 
@@ -66,6 +66,13 @@ data/results/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/results/.gitkeep
+
+# Generated data and local runtime files
+data/*.db
+data/*.db-*
+data/*.sqlite3
+data/exports/
+logs/
 
 # ==============================
 # Logs

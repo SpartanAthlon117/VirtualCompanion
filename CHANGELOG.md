@@ -22,10 +22,20 @@
 * `vision/src/eye_closure.py`: detección de cierres prolongados con umbral configurable y un evento por cierre.
 * `vision/tests/test_eye_closure.py`: pruebas de umbral, evento único, reapertura, pausa, reanudación, reinicio y entradas inválidas.
 * Overlay de cierre actual, cierres prolongados y umbral, con etiqueta `[PROLONGADO]` cuando corresponde.
+* `vision/src/perclos.py` con `PerclosCalculator`: PERCLOS simplificado con ventana móvil, pausa, mínimo de observación y reloj inyectable.
+* `vision/tests/test_perclos.py`: 18 pruebas de ventanas, pausas, datos insuficientes y estados inválidos.
+* `vision/src/overlay_metrics.py`: `format_perclos()` y línea `PERCLOS (ventana): porcentaje` en el overlay.
+* `vision/tests/test_overlay_metrics.py`: 4 pruebas del formato y de la presencia condicional de la línea de PERCLOS.
+* `docs/MVP_SCOPE.md`: alcance del MVP, decisiones cerradas, contratos de datos, esquema SQLite, backlog y criterios de aceptación.
+* `docs/validation/M1.md`: resultados del smoke test técnico en Linux del 2026-11-02 y sus limitaciones.
 
 ### Changed
 
 - `face_tracker.py`: integración del clasificador de estado ocular y visualización del estado `OPEN/CLOSED` en la interfaz.
+- `face_tracker.py`: integración de `PerclosCalculator` en el flujo en vivo, pausa y reanudación con la presencia del rostro, valor en el overlay y en la salida de depuración.
+- `face_tracker.py`: ajuste del inicio y la separación vertical del overlay para incluir la línea de PERCLOS sin salir del frame de 480 px.
+- `docs/validation/M1.md`: registro de las dos pruebas manuales de PERCLOS (2026-11-03 y 2026-11-04) en Linux, incluida la confirmación visual y de pausa.
+- `docs/PROJECT_STATUS.md`, `README.md` y `MEMORY.md`: resultados de las pruebas manuales de PERCLOS y pendientes de verificación en vivo y Windows.
 - `README.md`: actualización del estado actual del proyecto y corrección de la estructura documentada.
 - Documentación del carácter experimental del umbral utilizado para la clasificación ocular.
 - `blink_detector.py`: corrección del registro del inicio del cierre ocular para evitar reiniciar el temporizador durante cada frame clasificado como `CLOSED`.
@@ -63,6 +73,10 @@
 - `PROJECT_CONTEXT.md`: alcance de M1 actualizado con la detección de cierres prolongados.
 - `docs/PROJECT_STATUS.md`: estado actualizado, smoke test técnico de cámara y criterio para documentar la validación funcional.
 - `MEMORY.md`: estado, decisiones y siguientes pasos de la iteración.
+- `docs/PROJECT_STATUS.md`: validación de M1 actualizada con el smoke test Linux del 2026-11-02.
+- `README.md`, `docs/SETUP.md` y `PROJECT_CONTEXT.md`: estado, compatibilidad y próximas etapas alineados con el alcance del MVP.
+- `MEMORY.md`: semana 0 cerrada y decisiones del MVP registradas.
+- `.gitignore`: exclusión de bases SQLite, exports y logs.
 
 ### Fixed
 
