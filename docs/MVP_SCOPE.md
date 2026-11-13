@@ -109,8 +109,8 @@ Directrices:
 
 ## Contratos de datos
 
-Los contratos son documentación de diseño. Su implementación en código
-corresponde a las semanas 1 y 3.
+Los contratos son documentación de diseño. Su implementación en código se
+distribuye entre el motor de visión y la futura capa de persistencia.
 
 ### `MetricsSnapshot`
 
@@ -200,8 +200,9 @@ No se crea tabla de usuarios en el MVP. La fase de autenticación añadirá
 
 ## Configuración inicial
 
-Los valores definitivos de los umbrales de estado y alertas se justificarán en
-las semanas 3 y 4. En la semana 1 se implementará el cargador de configuración.
+Los valores definitivos de los umbrales de estado y alertas se justificarán
+cuando se definan los parámetros de fatiga. El cargador de configuración ya
+está implementado.
 
 | Sección | Claves previstas |
 |---|---|
@@ -222,7 +223,7 @@ las semanas 3 y 4. En la semana 1 se implementará el cargador de configuración
 
 1. Separar el motor de visión de la UI.
 2. Validar el PERCLOS integrado en el flujo y el overlay mediante la prueba manual controlada.
-3. Añadir configuración externa y logging.
+3. Añadir configuración externa y logging. **Completado.**
 4. Implementar la máquina de estados.
 5. Implementar el gestor de alertas.
 6. Crear FastAPI con REST, WebSocket y MJPEG.
@@ -251,20 +252,6 @@ las semanas 3 y 4. En la semana 1 se implementará el cargador de configuración
 - Bostezos y orientación de cabeza.
 - Validación con participantes.
 - Multiusuario y roles.
-
-## Calendario de referencia
-
-| Semana | Fechas | Objetivo |
-|---|---|---|
-| 0 | 2–6 nov | Alcance, contratos y validación M1 |
-| 1–2 | 9–20 nov | Motor separado y PERCLOS |
-| 3–4 | 23 nov–4 dic | Estados y alertas |
-| 5–6 | 7–18 dic | Backend, SQLite y web base |
-| — | 21 dic–1 ene | Buffer navideño |
-| 7–8 | 4–15 ene | Avatar 2D e integración |
-| 9–10 | 18–29 ene | Validación, endurecimiento y cierre |
-
-Entrega objetivo: 29 de enero de 2027, con margen hasta el 2 de febrero.
 
 ## Criterios de aceptación del MVP
 

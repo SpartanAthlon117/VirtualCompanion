@@ -1,0 +1,78 @@
+# Configuración por defecto de VirtualCompanion.
+#
+# Los umbrales de estado y alertas son heurísticas experimentales.
+# No han sido validados científicamente para detectar fatiga.
+#
+# Las rutas relativas se resuelven desde la raíz del repositorio.
+
+[vision]
+# Modelo de MediaPipe. No se versiona; debe descargarse antes de ejecutar.
+model_path = "vision/models/face_landmarker.task"
+
+[camera]
+index = 0
+width = 640
+height = 480
+
+[calibration]
+duration_seconds = 5.0
+stabilization_seconds = 1.0
+minimum_ear = 0.15
+
+[eye_state]
+# Umbral experimental: fracción del EAR de referencia.
+threshold_factor = 0.70
+
+[blink]
+analysis_window_seconds = 60.0
+# Un cierre que alcanza prolonged_closure.threshold_seconds se mide,
+# pero se registra solo como cierre prolongado y no como parpadeo.
+
+[prolonged_closure]
+# Umbral experimental de cierre prolongado.
+threshold_seconds = 1.5
+
+[perclos]
+window_seconds = 60.0
+minimum_observation_seconds = 20.0
+
+[face]
+# Tiempo máximo sin resultados nuevos antes de considerar ausente el rostro.
+loss_timeout_seconds = 0.5
+
+[state_machine]
+# Valores iniciales experimentales. Se ajustarán tras la validación técnica.
+warning_perclos = 0.20
+fatigue_perclos = 0.30
+warning_sustain_seconds = 10.0
+fatigue_sustain_seconds = 10.0
+warning_closure_seconds = 1.5
+fatigue_closure_seconds = 3.0
+warning_to_fatigue_seconds = 30.0
+warning_exit_perclos = 0.12
+fatigue_exit_perclos = 0.20
+recovery_sustain_seconds = 20.0
+no_blink_warning_seconds = 10.0
+no_blink_min_observation_seconds = 30.0
+low_blink_rate_per_minute = 8.0
+low_blink_rate_min_observation_seconds = 60.0
+
+[alerts]
+warning_cooldown_seconds = 30.0
+critical_cooldown_seconds = 60.0
+sound_enabled = true
+
+[storage]
+database_path = "data/virtualcompanion.db"
+
+[web]
+# El MVP solo se expone en localhost.
+host = "127.0.0.1"
+port = 8000
+preview_enabled = true
+
+[logging]
+level = "INFO"
+file = "logs/virtualcompanion.log"
+max_bytes = 1048576
+backup_count = 3

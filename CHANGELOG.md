@@ -4,6 +4,9 @@
 
 ### Added
 
+* `config/logging_setup.py`: logger de la aplicación con rotación por tamaño, salida UTF-8, nivel configurable y manejador de consola opcional.
+* `vision/tests/test_logging_setup.py`: 6 pruebas de creación del archivo y su directorio, nivel, consola opcional, reconfiguración idempotente, rotación y UTF-8.
+* Registro en archivo del inicio y fin de sesión, eventos de calibración, parpadeo, cierre prolongado y pérdida o recuperación de rostro, y errores.
 * `vision/src/eye_state.py` con la clase `EyeStateClassifier`.
 * Clasificación básica del estado ocular mediante EAR.
 * Utilización del EAR calibrado como referencia para la clasificación.
@@ -75,8 +78,17 @@
 - `MEMORY.md`: estado, decisiones y siguientes pasos de la iteración.
 - `docs/PROJECT_STATUS.md`: validación de M1 actualizada con el smoke test Linux del 2026-11-02.
 - `README.md`, `docs/SETUP.md` y `PROJECT_CONTEXT.md`: estado, compatibilidad y próximas etapas alineados con el alcance del MVP.
-- `MEMORY.md`: semana 0 cerrada y decisiones del MVP registradas.
+- `MEMORY.md`: alcance del MVP cerrado y decisiones registradas.
 - `.gitignore`: exclusión de bases SQLite, exports y logs.
+- `vision/src/blink_detector.py`: un cierre que alcanza el umbral de cierre prolongado ya no se contabiliza como parpadeo ni afecta la frecuencia; su duración se sigue registrando.
+- `vision/src/metrics_pipeline.py`: el límite de duración de parpadeo se toma de `prolonged_closure.threshold_seconds`, sin duplicar umbrales en la configuración.
+- `vision/src/face_tracker.py`: la línea `DEBUG` se emite como máximo una vez por segundo para reducir el volumen de la consola.
+- `config/default.toml`: comentario sobre el límite compartido entre parpadeos y cierres prolongados.
+- `README.md` y `docs/PROJECT_STATUS.md`: semántica del conteo de parpadeos, salida del CLI y número de pruebas actualizados.
+- `vision/src/face_tracker.py`: registro en archivo del inicio y fin de sesión, eventos relevantes y errores, manteniendo intacta la salida por consola.
+- `README.md` y `docs/SETUP.md`: documentación del registro de eventos, su ubicación y su rotación.
+- `docs/validation/M1.md`: prueba manual en Windows del 2026-11-10, con la nota sobre el conteo de parpadeos anterior al cambio de semántica.
+- `docs/PROJECT_STATUS.md` y `MEMORY.md`: cierre de la etapa de motor y logging, y siguiente etapa del MVP.
 
 ### Fixed
 

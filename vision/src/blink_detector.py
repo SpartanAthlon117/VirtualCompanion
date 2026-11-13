@@ -14,12 +14,22 @@ class BlinkDetector:
     OPEN = "OPEN"
     CLOSED = "CLOSED"
 
-    def __init__(self, analysis_window_seconds=60.0):
+    def __init__(
+        self,
+        analysis_window_seconds=60.0,
+        max_duration_seconds=None,
+    ):
         """
         Inicializa el detector de parpadeos.
 
         analysis_window_seconds determina el intervalo temporal
         utilizado para calcular la frecuencia de parpadeo.
+
+        max_duration_seconds limita la duración máxima de un cierre
+        para contabilizarse como parpadeo. Un cierre que alcanza ese
+        límite se mide, pero se considera un cierre prolongado y no
+        incrementa el conteo ni la frecuencia de parpadeo. El valor
+        None desactiva el límite y conserva el comportamiento anterior.
         """
 
         if analysis_window_seconds <= 0:
@@ -27,7 +37,16 @@ class BlinkDetector:
                 "analysis_window_seconds debe ser mayor que cero."
             )
 
+        if (
+            max_duration_seconds is not None
+            and max_duration_seconds <= 0
+        ):
+            raise ValueError(
+                "max_duration_seconds debe ser mayor que cero."
+            )
+
         self.analysis_window_seconds = analysis_window_seconds
+        self.max_duration_seconds = max_duration_seconds
         self.observation_start_time = None
         self.paused_at = None
         self.total_paused_duration = 0.0
@@ -103,7 +122,9 @@ class BlinkDetector:
         OPEN -> CLOSED -> OPEN
 
         También se mide cuánto tiempo permanecieron cerrados
-        los ojos entre CLOSED y OPEN.
+        los ojos entre CLOSED y OPEN. Si el cierre alcanza
+        max_duration_seconds, se registra como cierre prolongado
+        y no como parpadeo.
 
         Si el detector está pausado, la actualización se ignora.
         """
@@ -147,16 +168,37 @@ class BlinkDetector:
 
                 self.completed_blinks += 1
 
-            self.blink_detected = True
-            self.blink_count += 1
+            self.blink_detected = self._is_blink_duration(
+                self.last_closed_duration
+            )
 
-            self.blink_timestamps.append(current_time)
-            self.last_blink_time = current_time
-            self._remove_expired_timestamps(current_time)
+            if self.blink_detected:
+                self.blink_count += 1
+
+                self.blink_timestamps.append(current_time)
+                self.last_blink_time = current_time
+                self._remove_expired_timestamps(current_time)
 
             self.closed_start_time = None
 
         self.previous_state = eye_state
+
+    def _is_blink_duration(self, duration):
+        """
+        Indica si la duración de un cierre cuenta como parpadeo.
+
+        Sin límite configurado, todo cierre completado cuenta. Con
+        límite, el cierre debe ser estrictamente menor que el umbral
+        para no solaparse con la detección de cierres prolongados.
+        """
+
+        if self.max_duration_seconds is None:
+            return True
+
+        if duration is None:
+            return False
+
+        return duration < self.max_duration_seconds
 
     def _remove_expired_timestamps(self, current_time):
         """

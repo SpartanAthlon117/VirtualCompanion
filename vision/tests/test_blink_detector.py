@@ -190,6 +190,50 @@ def test_rejects_invalid_analysis_window(window):
     with pytest.raises(ValueError):
         BlinkDetector(analysis_window_seconds=window)
 
+@pytest.mark.parametrize("max_duration", [0, -1, -0.5])
+def test_rejects_invalid_max_duration(max_duration):
+    with pytest.raises(ValueError):
+        BlinkDetector(max_duration_seconds=max_duration)
+
+def test_closure_at_limit_is_not_counted_as_blink(clock):
+    detector = BlinkDetector(max_duration_seconds=1.5)
+
+    detector.update(BlinkDetector.OPEN)
+    detector.update(BlinkDetector.CLOSED)
+    clock(2.0)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.is_blink() is False
+    assert detector.get_blink_count() == 0
+    assert detector.get_last_closed_duration() == pytest.approx(2.0)
+
+def test_closure_below_limit_is_counted_as_blink(clock):
+    detector = BlinkDetector(max_duration_seconds=1.5)
+
+    detector.update(BlinkDetector.OPEN)
+    detector.update(BlinkDetector.CLOSED)
+    clock(1.4)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.is_blink() is True
+    assert detector.get_blink_count() == 1
+    assert detector.get_last_closed_duration() == pytest.approx(1.4)
+
+def test_long_closure_does_not_affect_blink_rate(clock):
+    detector = BlinkDetector(
+        analysis_window_seconds=60.0,
+        max_duration_seconds=1.5,
+    )
+
+    detector.update(BlinkDetector.OPEN)
+    clock(10.0)
+    detector.update(BlinkDetector.CLOSED)
+    clock(2.0)
+    detector.update(BlinkDetector.OPEN)
+
+    assert detector.get_blink_rate_per_minute() == 0.0
+    assert detector.get_time_since_last_blink() is None
+
 def test_uses_elapsed_time_before_analysis_window_is_complete(clock):
     detector = BlinkDetector(analysis_window_seconds=60.0)
 

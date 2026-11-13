@@ -101,6 +101,10 @@ python vision/src/face_tracker.py
 
 En Linux se verificaron cámara, modelo, MediaPipe, EAR y calibración mediante un smoke test sin ventana. La ejecución de `face_tracker.py` con interfaz gráfica no se validó en esa sesión. La web local, FastAPI y SQLite todavía no forman parte del código.
 
+### Registro de eventos
+
+La ejecución crea `logs/virtualcompanion.log`, ruta definida en la sección `[logging]` de `config/default.toml`. El archivo rota al alcanzar `max_bytes` y conserva `backup_count` copias; se escribe en UTF-8 con el nivel configurado (`INFO` por defecto). El CLI mantiene su salida por consola y no duplica esos mensajes en el archivo.
+
 ## 7. Ejecutar las pruebas
 
 Desde la raíz del repositorio:

@@ -36,7 +36,7 @@ jobs:
         run: python -m pip check
 
       - name: Compilar código Python
-        run: python -m compileall -q vision
+        run: python -m compileall -q vision config
 
       - name: Ejecutar pruebas
         run: python -m pytest -q

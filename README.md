@@ -52,12 +52,13 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Módulo de cálculo de PERCLOS simplificado (`vision/src/perclos.py`), integrado en el flujo en vivo y en el overlay.
 * Pausa y reanudación de la calibración, los parpadeos, los cierres prolongados y PERCLOS ante la pérdida del rostro.
 * Visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia, tiempo desde el último parpadeo, PERCLOS, cierre actual, cierres prolongados y umbral.
+* Registro de eventos en archivo con rotación por tamaño (`config/logging_setup.py`).
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
 
 El detector de parpadeos utiliza la secuencia temporal del estado ocular para identificar eventos de parpadeo y registra la duración del cierre ocular en segundos.
 
-La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esa duración alimenta tanto el conteo de parpadeos como la detección de cierres prolongados.
+La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esa duración alimenta el conteo de parpadeos y la detección de cierres prolongados. Un cierre que alcanza el umbral de cierre prolongado se mide, pero no se contabiliza como parpadeo: así el conteo y la frecuencia no duplican un mismo evento.
 
 La duración del cierre ocular todavía no representa por sí sola una detección de fatiga. Será utilizada como uno de los indicadores dentro de las etapas posteriores del sistema.
 
@@ -79,7 +80,7 @@ La detección de cierres prolongados utiliza un componente independiente. El umb
 
 El evento se emite una sola vez cuando un cierre cruza el umbral. Mientras los ojos permanezcan cerrados no se repite, y al reabrir se registra la duración final. Si se pierde el rostro, el cierre en curso se descarta; si los ojos siguen cerrados al reanudar, comienza un nuevo conteo.
 
-Un cierre prolongado también se contabiliza como parpadeo completado por el detector actual. Esta iteración no modifica esa semántica; el nuevo componente solo añade el indicador de duración prolongada.
+Un cierre que alcanza el umbral de cierre prolongado **no** se contabiliza como parpadeo completado: se registra únicamente como cierre prolongado. De este modo, el conteo de parpadeos, la frecuencia por minuto y el tiempo desde el último parpadeo describen parpadeos, mientras que los cierres largos quedan representados por su propio indicador. La duración del último cierre y la duración promedio siguen reflejando todos los cierres completados, incluidos los prolongados.
 
 La generación de alertas por fatiga requiere lógica adicional y no forma parte de esta etapa.
 
@@ -103,6 +104,14 @@ Después de completar la calibración, el overlay muestra el número total de pa
 
 Cuando un cierre supera el umbral, la línea del cierre actual muestra `[PROLONGADO]` y cambia de color; el texto se conserva para no depender únicamente del color. Cuando el rostro no está presente, las métricas se congelan y el overlay indica `Metricas en pausa (sin rostro)`. El texto gráfico utiliza caracteres ASCII para evitar problemas de representación con las fuentes de OpenCV.
 
+### Registro de eventos
+
+`config/logging_setup.py` configura un logger que escribe en el archivo definido en `[logging]` de `config/default.toml` (`logs/virtualcompanion.log` por defecto), con rotación por tamaño (`max_bytes`) y un número limitado de copias (`backup_count`). El directorio se crea si no existe y el archivo se escribe en UTF-8.
+
+El CLI registra el inicio y el fin de la sesión, los eventos de calibración, parpadeo, cierre prolongado y pérdida o recuperación de rostro, además de los errores. La salida por consola se mantiene sin cambios y no se duplica en el archivo. No se registran imágenes, video ni datos personales; solo métricas y mensajes de estado.
+
+La función `configure_logging()` es idempotente: al invocarla de nuevo cierra los manejadores anteriores, de modo que el futuro servicio web pueda reutilizarla sin duplicar líneas.
+
 ## Instalación y ejecución
 
 Windows es el entorno de referencia y de integración continua. Linux se verificó parcialmente el 2026-11-02 con un smoke test técnico (cámara, modelo, landmarks, EAR y calibración); la ejecución completa con ventana y la futura web aún no se han validado en Linux. La guía detallada está en [`docs/SETUP.md`](docs/SETUP.md).
@@ -125,6 +134,8 @@ Ejecuta el seguimiento facial:
 .\.venv\Scripts\python.exe vision/src/face_tracker.py
 ```
 
+La consola muestra una línea `EVENTO` por cada evento detectado y como máximo una línea `DEBUG` por segundo con el resumen de métricas.
+
 Las versiones exactas de las dependencias están fijadas en `vision/requirements.txt` y `vision/requirements-dev.txt`.
 
 ## Pruebas
@@ -135,13 +146,15 @@ Desde la raíz del repositorio:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-La suite incluye 96 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, cierres prolongados, PERCLOS, formato del overlay y clasificación ocular.
+La suite incluye 137 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, cierres prolongados, PERCLOS, configuración, logging, pipeline, motor, formato del overlay y clasificación ocular.
 
 El 2026-11-02 se ejecutó un smoke test técnico en Linux: 164 frames, 100 % con rostro, calibración completada con EAR de referencia `0.417989` y un parpadeo incidental. Los resultados y las limitaciones están en [`docs/validation/M1.md`](docs/validation/M1.md).
 
-El 2026-11-03 se verificó manualmente la integración de PERCLOS en Linux: el valor apareció tras 20 s de observación efectiva, varió con los cierres oculares y respetó las pausas por pérdida de rostro. El 2026-11-04 se confirmó que la línea se ve sin problemas y que la pausa detiene los cálculos. En una segunda sesión, las pausas impidieron acumular 20 s efectivos y PERCLOS permaneció en `--`; la calibración y el contador de parpadeos se conservaron. Falta verificar en vivo la conservación de un valor numérico y repetir la prueba en Windows.
+El 2026-11-03 se verificó manualmente la integración de PERCLOS en Linux: el valor apareció tras 20 s de observación efectiva, varió con los cierres oculares y respetó las pausas por pérdida de rostro. El 2026-11-04 se confirmó que la línea se ve sin problemas y que la pausa detiene los cálculos. En una segunda sesión, las pausas impidieron acumular 20 s efectivos y PERCLOS permaneció en `--`; la calibración y el contador de parpadeos se conservaron.
 
-La integración continua no cubre la cámara. La validación funcional controlada de M1 sigue pendiente: 10 parpadeos, 3 cierres superiores a 2 s, pérdida de rostro, gafas, distancias, iluminación y prueba en Windows. No se guardan imágenes ni video.
+El 2026-11-10 se ejecutó la aplicación completa en Windows con cámara: calibración con 79 muestras, PERCLOS visible a los 20.02 s (33.8 %, con descenso a 24.9 % y ascenso a 37.3 % durante los cierres), dos cierres prolongados de 1.514 s y 1.520 s, pérdida y recuperación de rostro y salida limpia. El conteo mostrado entonces (13 parpadeos) incluía dos cierres largos; con la regla vigente el conteo habría sido 11.
+
+La validación funcional controlada de M1 sigue pendiente: 10 parpadeos, 3 cierres superiores a 2 s, pérdida de rostro, gafas, distancias e iluminación. No se guardan imágenes ni video.
 
 ## Calidad y CI
 
