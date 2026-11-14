@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Callable
 
 from config.settings import AppSettings
+from vision.src.alert_manager import AlertManager
 from vision.src.blink_detector import BlinkDetector
 from vision.src.ear_calibrator import EARCalibrator
 from vision.src.eye_closure import ProlongedClosureDetector
@@ -19,6 +21,7 @@ from vision.src.models import (
     VisionEventType,
 )
 from vision.src.perclos import PerclosCalculator
+from vision.src.state_machine import FatigueStateMachine
 
 
 def _utc_now() -> datetime:
@@ -47,7 +50,8 @@ class MetricsPipeline:
 
     No depende de OpenCV, MediaPipe ni de la interfaz. Recibe el
     estado del rostro y los valores EAR ya calculados, y devuelve
-    una instantánea inmutable junto con los eventos ocurridos.
+    una instantánea inmutable, los eventos ocurridos, la evaluación
+    de fatiga y las alertas generadas.
 
     La semántica de pausa, calibración y PERCLOS se conserva respecto
     al flujo anterior de face_tracker.py.
@@ -94,6 +98,13 @@ class MetricsPipeline:
                 settings.perclos.minimum_observation_seconds
             ),
         )
+        self._state_machine = FatigueStateMachine(
+            settings.state_machine,
+        )
+        self._alert_manager = AlertManager(
+            settings.alerts,
+            wall_clock=self._wall_clock,
+        )
 
         self._last_eye_state: str | None = None
         self._face_was_present = False
@@ -114,6 +125,8 @@ class MetricsPipeline:
         self._blink_detector.reset()
         self._closure_detector.reset()
         self._perclos_calculator.reset()
+        self._state_machine.reset()
+        self._alert_manager.reset()
         self._last_eye_state = None
         self._face_was_present = False
         self._has_seen_face = False
@@ -188,10 +201,23 @@ class MetricsPipeline:
             average_ear=average_ear,
         )
 
+        assessment = self._state_machine.update(
+            face_present=snapshot.face_present,
+            perclos=snapshot.perclos,
+            current_closed_duration=snapshot.current_closed_duration,
+        )
+        assessment = replace(
+            assessment,
+            alert_level=self._alert_manager.level_for(assessment.state),
+        )
+        alerts = self._alert_manager.update(assessment)
+
         return PipelineUpdate(
             snapshot=snapshot,
             calibration=self._build_calibration_status(),
             events=tuple(events),
+            assessment=assessment,
+            alerts=alerts,
         )
 
     def _update_detectors(

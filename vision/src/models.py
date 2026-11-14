@@ -17,6 +17,41 @@ class VisionEventType:
     FACE_RECOVERED = "FACE_RECOVERED"
 
 
+class FatigueState:
+    """Estados de la evaluación experimental de fatiga."""
+
+    NORMAL = "NORMAL"
+    WARNING = "WARNING"
+    FATIGUE = "FATIGUE"
+
+
+class AlertLevel:
+    """Niveles de alerta presentados al usuario."""
+
+    NONE = "NONE"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+class AlertType:
+    """Tipos de alerta emitidos por el gestor."""
+
+    FATIGUE_WARNING = "FATIGUE_WARNING"
+    FATIGUE_CRITICAL = "FATIGUE_CRITICAL"
+
+
+@dataclass(frozen=True)
+class Assessment:
+    """Resultado de la evaluación experimental del estado de fatiga."""
+
+    state: str
+    reasons: tuple[str, ...]
+    changed: bool
+    paused: bool
+    alert_level: str = AlertLevel.NONE
+
+
 @dataclass(frozen=True)
 class CalibrationStatus:
     """Estado actual de la calibración del EAR."""
@@ -38,6 +73,17 @@ class VisionEvent:
     occurred_at: datetime
     message: str
     duration_seconds: float | None = None
+
+
+@dataclass(frozen=True)
+class AlertEvent:
+    """Alerta generada al entrar en un estado que requiere atención."""
+
+    type: str
+    level: str
+    message: str
+    occurred_at: datetime
+    id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -71,3 +117,5 @@ class PipelineUpdate:
     snapshot: MetricsSnapshot
     calibration: CalibrationStatus
     events: tuple[VisionEvent, ...]
+    assessment: Assessment
+    alerts: tuple[AlertEvent, ...]

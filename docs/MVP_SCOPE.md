@@ -2,9 +2,9 @@
 
 ## Estado del documento
 
-- Fecha: 2026-11-03
-- Estado: alcance acordado para el MVP; smoke test técnico de M1 realizado el 2026-11-02 y validación funcional controlada pendiente.
-- Este documento describe lo que se va a construir. No afirma que las
+- Fecha: 2026-11-13
+- Estado: alcance acordado para el MVP. La máquina de estados y el gestor de alertas ya están implementados en el CLI; la web, el backend, la persistencia y el avatar siguen pendientes.
+- Este documento describe lo que se va a construir. No afirma que todas las
   funcionalidades del MVP ya estén implementadas.
 
 ## Objetivo del MVP
@@ -30,7 +30,6 @@ son configurables y no están validados científicamente.
 | Persistencia | SQLite local |
 | Plataforma | Windows y Linux; se valida en ambas |
 | Indicadores | Oculares: EAR, parpadeos, cierres prolongados y PERCLOS |
-| Dedicación | Aproximadamente 20 h/semana |
 | Validación | Autopruebas guionizadas, sin participantes |
 | Autenticación | Fase posterior; un único administrador |
 | Página web | Obligatoria para usar el sistema |
@@ -89,14 +88,14 @@ Responsabilidades:
 
 | Componente | Responsabilidad |
 |---|---|
-| `VisionEngine` / `MonitoringSession` | Captura, landmarks, EAR y coordinación del flujo |
-| `PerclosCalculator` | Proporción de tiempo con ojos cerrados en una ventana |
-| `FatigueStateMachine` | Transiciones de estado con histéresis y razones |
-| `AlertManager` | Niveles, deduplicación y cooldown de alertas |
-| `MonitoringService` | Une visión, métricas, estado, alertas y persistencia |
-| `FastAPI` | REST, WebSocket y transmisión MJPEG |
-| `SQLite` | Sesiones, evaluaciones y eventos |
-| `web/` | Dashboard, historial y avatar 2D |
+| `VisionEngine` / `MonitoringSession` | Captura, landmarks, EAR y coordinación del flujo; `VisionEngine` implementado, `MonitoringSession` pendiente |
+| `PerclosCalculator` | Proporción de tiempo con ojos cerrados en una ventana; implementado |
+| `FatigueStateMachine` | Transiciones de estado con histéresis y razones; implementado |
+| `AlertManager` | Niveles, deduplicación y cooldown de alertas; implementado |
+| `MonitoringService` | Une visión, métricas, estado, alertas y persistencia; pendiente |
+| `FastAPI` | REST, WebSocket y transmisión MJPEG; pendiente |
+| `SQLite` | Sesiones, evaluaciones y eventos; pendiente |
+| `web/` | Dashboard, historial y avatar 2D; pendiente |
 
 Directrices:
 
@@ -132,20 +131,29 @@ distribuye entre el motor de visión y la futura capa de persistencia.
 
 ### `Assessment`
 
-- `captured_at`.
 - `state`: `NORMAL`, `WARNING` o `FATIGUE`.
-- `reasons`: lista de cadenas explicables.
+- `reasons`: tupla de cadenas explicables.
+- `changed`: indica si el estado cambió en esa evaluación.
+- `paused`: indica si la evaluación está en pausa por pérdida de rostro.
 - `alert_level`: `NONE`, `INFO`, `WARNING` o `CRITICAL`.
-- `metrics`: `MetricsSnapshot`.
+
+### `PipelineUpdate`
+
+- `snapshot`: `MetricsSnapshot`.
+- `calibration`: estado de la calibración.
+- `events`: eventos de visión de la actualización.
+- `assessment`: `Assessment` de la actualización.
+- `alerts`: alertas emitidas en la actualización.
 
 ### `AlertEvent`
 
-- `id`: entero o `None` antes de persistirse.
-- `occurred_at`.
-- `type`: tipo de evento, por ejemplo `PROLONGED_CLOSURE` o `HIGH_PERCLOS`.
-- `level`: nivel de alerta.
+- `type`: `FATIGUE_WARNING` o `FATIGUE_CRITICAL`.
+- `level`: `WARNING` o `CRITICAL`.
 - `message`: texto para el usuario.
-- `metrics`: métricas relevantes en el momento del evento.
+- `occurred_at`: fecha y hora UTC.
+
+Los campos de persistencia (`id`, `session_id`, métricas asociadas) se añadirán
+cuando se integre SQLite.
 
 ### `SessionSummary`
 
@@ -200,9 +208,7 @@ No se crea tabla de usuarios en el MVP. La fase de autenticación añadirá
 
 ## Configuración inicial
 
-Los valores definitivos de los umbrales de estado y alertas se justificarán
-cuando se definan los parámetros de fatiga. El cargador de configuración ya
-está implementado.
+Los umbrales de estado y alertas ya están definidos en `config/default.toml` como valores experimentales y configurables. Su justificación definitiva requiere validación adicional. El cargador de configuración está implementado.
 
 | Sección | Claves previstas |
 |---|---|
@@ -212,20 +218,25 @@ está implementado.
 | `blink` | `analysis_window_seconds` |
 | `prolonged_closure` | `threshold_seconds` |
 | `perclos` | `window_seconds`, `minimum_observation_seconds` |
-| `state_machine` | Umbrales y tiempos por definir y justificar |
-| `alerts` | `cooldown_seconds` por tipo |
+| `state_machine` | `warning_perclos`, `fatigue_perclos`, `warning_sustain_seconds`, `fatigue_sustain_seconds`, `warning_closure_seconds`, `fatigue_closure_seconds`, `warning_exit_perclos`, `recovery_sustain_seconds` |
+| `alerts` | `warning_cooldown_seconds`, `critical_cooldown_seconds`, `sound_enabled` |
 | `storage` | `database_path` |
 | `web` | `host`, `port`, `preview_enabled` |
+
+Las claves `warning_to_fatigue_seconds`, `fatigue_exit_perclos`, `no_blink_*` y
+`low_blink_rate_*` están reservadas y no intervienen en las transiciones
+actuales. La frecuencia y la ausencia de parpadeo se conservan como
+información.
 
 ## Backlog priorizado
 
 ### P0 — imprescindible para el MVP
 
-1. Separar el motor de visión de la UI.
-2. Validar el PERCLOS integrado en el flujo y el overlay mediante la prueba manual controlada.
+1. Separar el motor de visión de la UI. **Completado.**
+2. Validar el PERCLOS integrado en el flujo y el overlay mediante la prueba manual controlada. **Parcialmente completado: verificado en vivo; falta la recuperación sostenida y la repetición controlada.**
 3. Añadir configuración externa y logging. **Completado.**
-4. Implementar la máquina de estados.
-5. Implementar el gestor de alertas.
+4. Implementar la máquina de estados. **Completado.**
+5. Implementar el gestor de alertas. **Completado.**
 6. Crear FastAPI con REST, WebSocket y MJPEG.
 7. Crear el repositorio SQLite.
 8. Crear el dashboard web.
@@ -233,7 +244,7 @@ está implementado.
 10. Integrar el flujo de extremo a extremo.
 11. Completar pruebas unitarias y de integración.
 12. Ejecutar la autovalidación técnica y documentarla.
-13. Actualizar README, SETUP, PROJECT_STATUS, CHANGELOG y MEMORY.
+13. Actualizar README, SETUP, PROJECT_STATUS, CHANGELOG y MEMORY. **Completado.**
 
 ### P1 — deseable si el tiempo alcanza
 
@@ -289,6 +300,7 @@ intentos y HTTPS si se expone. No habrá auto-registro público.
 - Registro de 10 parpadeos.
 - Tres cierres superiores a 2 s.
 - Pérdida y recuperación de rostro.
+- Recuperación sostenida a `NORMAL` tras reducir el PERCLOS y cesar los cierres `>= 1.5 s`.
 - Repetición con gafas, dos distancias y dos condiciones de luz cuando sea posible.
 - Registro de aciertos, falsos positivos, falsos negativos, FPS y latencia.
 - Sin imágenes ni video; solo métricas, eventos y logs.
@@ -300,7 +312,7 @@ datos reales. No se atribuirá validez clínica a los resultados.
 
 | Riesgo | Mitigación |
 |---|---|
-| Falta de tiempo | Prioridad P0 y buffer navideño |
+| Alcance no priorizado | Prioridad P0 y revisión de alcance |
 | Diferencias de cámara entre Windows y Linux | Pruebas en ambas plataformas |
 | Bloqueo de FastAPI por MediaPipe | Visión en hilo y estado compartido |
 | Concurrencia en SQLite | WAL y un único escritor |

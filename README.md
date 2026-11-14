@@ -4,7 +4,7 @@ Prototipo académico de acompañante virtual para el monitoreo de indicadores vi
 
 ## Estado
 
-En desarrollo. M1 de visión implementado; el MVP con página web y avatar 2D está en planificación.
+En desarrollo. M1 de visión implementado, con evaluación experimental de fatiga y alertas en el CLI. El MVP con página web y avatar 2D está en planificación.
 
 ## Objetivo
 
@@ -52,6 +52,11 @@ Actualmente se encuentran implementadas las siguientes capacidades:
 * Módulo de cálculo de PERCLOS simplificado (`vision/src/perclos.py`), integrado en el flujo en vivo y en el overlay.
 * Pausa y reanudación de la calibración, los parpadeos, los cierres prolongados y PERCLOS ante la pérdida del rostro.
 * Visualización en el overlay de parpadeos totales, último cierre, cierre promedio, frecuencia, tiempo desde el último parpadeo, PERCLOS, cierre actual, cierres prolongados y umbral.
+* Máquina de estados experimental `NORMAL`, `WARNING` y `FATIGUE` basada en PERCLOS sostenido y cierres prolongados.
+* Evaluación con motivos explicables, histéresis y recuperación sostenida.
+* Gestor de alertas con deduplicación y cooldown independiente por nivel.
+* Panel de estado, nivel y motivo en el overlay, con indicador de pausa.
+* Salida de cambios de estado y alertas en consola y en el archivo de log.
 * Registro de eventos en archivo con rotación por tamaño (`config/logging_setup.py`).
 
 La clasificación del estado ocular utiliza el EAR promedio y un EAR de referencia obtenido durante la calibración.
@@ -60,7 +65,7 @@ El detector de parpadeos utiliza la secuencia temporal del estado ocular para id
 
 La duración del cierre se obtiene desde el momento en que los ojos pasan de `OPEN` a `CLOSED` hasta que regresan a `OPEN`. Esa duración alimenta el conteo de parpadeos y la detección de cierres prolongados. Un cierre que alcanza el umbral de cierre prolongado se mide, pero no se contabiliza como parpadeo: así el conteo y la frecuencia no duplican un mismo evento.
 
-La duración del cierre ocular todavía no representa por sí sola una detección de fatiga. Será utilizada como uno de los indicadores dentro de las etapas posteriores del sistema.
+La duración del cierre ocular se utiliza como uno de los indicadores de la evaluación experimental. Por sí sola no confirma fatiga ni sustituye una valoración con evidencia independiente.
 
 El umbral utilizado actualmente es relativo al EAR de referencia. Este parámetro es experimental y todavía no representa un umbral validado científicamente para la detección de fatiga.
 
@@ -72,7 +77,7 @@ La lógica del detector cuenta los parpadeos completados mediante la transición
 
 También se conserva de manera independiente el instante del último parpadeo para poder calcular el tiempo transcurrido desde ese evento, incluso cuando el parpadeo ya se encuentra fuera de la ventana de análisis.
 
-Estas métricas constituyen indicadores temporales que posteriormente podrán utilizarse en el análisis de patrones asociados a la fatiga. En esta etapa no se utilizan todavía para determinar por sí solas un estado de fatiga.
+Estas métricas constituyen indicadores temporales. La frecuencia y la ausencia de parpadeo se conservan como información y no intervienen en las transiciones de estado; la evaluación combina únicamente PERCLOS sostenido y cierres prolongados.
 
 ### Cierres prolongados
 
@@ -82,7 +87,7 @@ El evento se emite una sola vez cuando un cierre cruza el umbral. Mientras los o
 
 Un cierre que alcanza el umbral de cierre prolongado **no** se contabiliza como parpadeo completado: se registra únicamente como cierre prolongado. De este modo, el conteo de parpadeos, la frecuencia por minuto y el tiempo desde el último parpadeo describen parpadeos, mientras que los cierres largos quedan representados por su propio indicador. La duración del último cierre y la duración promedio siguen reflejando todos los cierres completados, incluidos los prolongados.
 
-La generación de alertas por fatiga requiere lógica adicional y no forma parte de esta etapa.
+Los cierres prolongados alimentan la evaluación de fatiga descrita más adelante. Un cierre aislado se registra como evento y no se presenta como un diagnóstico.
 
 ### PERCLOS simplificado
 
@@ -91,6 +96,30 @@ El módulo `vision/src/perclos.py` calcula un PERCLOS simplificado: la proporci�
 El tiempo en el que el rostro no está presente se excluye del cálculo. Al recuperar el rostro, el cálculo continúa desde el estado ocular observado y no interpreta la ausencia como un cierre.
 
 El resultado se presenta como porcentaje en el overlay y también se incluye en la salida de depuración. Es un indicador **experimental**: no distingue por sí mismo fatiga, somnolencia ni otros estados, y no sustituye una validación con evidencia independiente.
+
+### Evaluación experimental de fatiga
+
+`vision/src/state_machine.py` combina dos indicadores observables: PERCLOS sostenido y duración del cierre ocular en curso. Los estados son `NORMAL`, `WARNING` y `FATIGUE`.
+
+Reglas predeterminadas, configurables y experimentales:
+
+| Condición | Estado |
+|---|---|
+| PERCLOS `>= 0.20` durante `10 s` | `WARNING` |
+| PERCLOS `>= 0.30` durante `10 s` | `FATIGUE` |
+| Cierre ocular `>= 1.5 s` | `WARNING` |
+| Cierre ocular `>= 3.0 s` | `FATIGUE` |
+| PERCLOS `< 0.12` durante `20 s` y sin cierre `>= 1.5 s` | vuelve a `NORMAL` |
+
+La recuperación exige que el PERCLOS descienda de forma sostenida. Como la ventana de PERCLOS es de `60 s`, después de un cierre largo pueden pasar aproximadamente `80 s` antes de que el indicador salga de la ventana y se complete la recuperación. Los cierres `>= 1.5 s` reinician la espera. El panel muestra el PERCLOS actual y el objetivo para explicar por qué el estado sigue elevado.
+
+La frecuencia de parpadeo y la ausencia de parpadeo no escalan el estado; se mantienen como información. Las reglas no constituyen un diagnóstico clínico.
+
+### Alertas
+
+`vision/src/alert_manager.py` emite una alerta solo al entrar en `WARNING` o `FATIGUE`, no en cada evaluación. Los cooldowns predeterminados son `30 s` para advertencias y `60 s` para alertas críticas. Una pausa por pérdida de rostro no emite alertas ni actualiza el estado recordado.
+
+Las alertas se muestran en consola y se registran en el archivo de log. También aparecen en el panel del overlay. El audio y la presentación web aún no están implementados.
 
 ### Pérdida de rostro
 
@@ -104,11 +133,13 @@ Después de completar la calibración, el overlay muestra el número total de pa
 
 Cuando un cierre supera el umbral, la línea del cierre actual muestra `[PROLONGADO]` y cambia de color; el texto se conserva para no depender únicamente del color. Cuando el rostro no está presente, las métricas se congelan y el overlay indica `Metricas en pausa (sin rostro)`. El texto gráfico utiliza caracteres ASCII para evitar problemas de representación con las fuentes de OpenCV.
 
+El panel de evaluación muestra el estado (`NORMAL`, `ADVERTENCIA`, `FATIGA`), el nivel de alerta y el motivo principal, con el indicador `(PAUSA)` cuando no hay rostro. Cuando el estado está elevado, el panel indica el PERCLOS actual y el objetivo de recuperación. El color del estado es verde, amarillo o rojo, pero el texto siempre expresa el estado para no depender solo del color.
+
 ### Registro de eventos
 
 `config/logging_setup.py` configura un logger que escribe en el archivo definido en `[logging]` de `config/default.toml` (`logs/virtualcompanion.log` por defecto), con rotación por tamaño (`max_bytes`) y un número limitado de copias (`backup_count`). El directorio se crea si no existe y el archivo se escribe en UTF-8.
 
-El CLI registra el inicio y el fin de la sesión, los eventos de calibración, parpadeo, cierre prolongado y pérdida o recuperación de rostro, además de los errores. La salida por consola se mantiene sin cambios y no se duplica en el archivo. No se registran imágenes, video ni datos personales; solo métricas y mensajes de estado.
+El CLI registra el inicio y el fin de la sesión, los eventos de calibración, parpadeo, cierre prolongado, pérdida o recuperación de rostro, los cambios de estado y las alertas, además de los errores. El archivo conserva esos registros y la consola mantiene su formato habitual. No se registran imágenes, video ni datos personales; solo métricas y mensajes de estado.
 
 La función `configure_logging()` es idempotente: al invocarla de nuevo cierra los manejadores anteriores, de modo que el futuro servicio web pueda reutilizarla sin duplicar líneas.
 
@@ -134,7 +165,7 @@ Ejecuta el seguimiento facial:
 .\.venv\Scripts\python.exe vision/src/face_tracker.py
 ```
 
-La consola muestra una línea `EVENTO` por cada evento detectado y como máximo una línea `DEBUG` por segundo con el resumen de métricas.
+La consola muestra una línea `EVENTO` por cada evento detectado, una línea `ESTADO` cuando cambia la evaluación, una línea `ALERTA` por cada alerta emitida y como máximo una línea `DEBUG` por segundo con el resumen de métricas.
 
 Las versiones exactas de las dependencias están fijadas en `vision/requirements.txt` y `vision/requirements-dev.txt`.
 
@@ -146,13 +177,15 @@ Desde la raíz del repositorio:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-La suite incluye 137 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, cierres prolongados, PERCLOS, configuración, logging, pipeline, motor, formato del overlay y clasificación ocular.
+La suite incluye 195 pruebas de métricas geométricas, calibración, presencia de rostro, detección de parpadeos, cierres prolongados, PERCLOS, configuración, logging, pipeline, motor, máquina de estados, gestor de alertas, integración de la evaluación, formato y panel del overlay, y clasificación ocular.
 
 El 2026-11-02 se ejecutó un smoke test técnico en Linux: 164 frames, 100 % con rostro, calibración completada con EAR de referencia `0.417989` y un parpadeo incidental. Los resultados y las limitaciones están en [`docs/validation/M1.md`](docs/validation/M1.md).
 
 El 2026-11-03 se verificó manualmente la integración de PERCLOS en Linux: el valor apareció tras 20 s de observación efectiva, varió con los cierres oculares y respetó las pausas por pérdida de rostro. El 2026-11-04 se confirmó que la línea se ve sin problemas y que la pausa detiene los cálculos. En una segunda sesión, las pausas impidieron acumular 20 s efectivos y PERCLOS permaneció en `--`; la calibración y el contador de parpadeos se conservaron.
 
 El 2026-11-10 se ejecutó la aplicación completa en Windows con cámara: calibración con 79 muestras, PERCLOS visible a los 20.02 s (33.8 %, con descenso a 24.9 % y ascenso a 37.3 % durante los cierres), dos cierres prolongados de 1.514 s y 1.520 s, pérdida y recuperación de rostro y salida limpia. El conteo mostrado entonces (13 parpadeos) incluía dos cierres largos; con la regla vigente el conteo habría sido 11.
+
+En una sesión manual posterior con cámara se observaron `WARNING` con un cierre de 1.519 s y `FATIGUE` con un cierre de 3.0 s, junto con sus alertas. La recuperación a `NORMAL` no se observó porque el PERCLOS no bajó de 0.12 y continuaron los cierres largos; el panel muestra ahora el PERCLOS actual y el objetivo de recuperación. Queda pendiente verificar la recuperación sostenida con cámara.
 
 La validación funcional controlada de M1 sigue pendiente: 10 parpadeos, 3 cierres superiores a 2 s, pérdida de rostro, gafas, distancias e iluminación. No se guardan imágenes ni video.
 
@@ -176,23 +209,23 @@ La verificación actual es funcional y sintáctica. No se ha adoptado todavía u
 ## Estructura
 
 * `vision/` — módulo de visión por computadora.
-  * `vision/src/` — captura, métricas, calibración, clasificación, parpadeos, cierres prolongados, PERCLOS y overlay.
+  * `vision/src/` — captura, métricas, calibración, clasificación, parpadeos, cierres prolongados, PERCLOS, máquina de estados, alertas y overlay.
   * `vision/tests/` — pruebas automatizadas.
 * `data/` — estructura para datos experimentales; actualmente solo contiene archivos `.gitkeep`.
 * `docs/` — documentación técnica, alcance, estado y guía de entorno.
   * `docs/validation/` — resultados de validación con evidencia real.
 * `.github/workflows/` — integración continua.
-* `backend/`, `web/` y `config/` — planificados para el MVP; todavía no existen.
+* `backend/` y `web/` — planificados para el MVP; todavía no existen.
+* `config/` — configuración externa y logging de la aplicación.
 * `AGENTS.md`, `PROJECT_CONTEXT.md`, `MEMORY.md` y `CHANGELOG.md` — reglas, contexto, memoria y registro de cambios.
 
 ## Próximas etapas
 
 El alcance detallado está en [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md). La secuencia prevista es:
 
-1. Cerrar la validación funcional controlada de M1 en Windows y Linux.
-2. Separación del motor de visión de la interfaz y configuración externa de umbrales y ventanas.
-3. Integración de indicadores y máquina de estados de fatiga.
-4. Generación de alertas.
-5. Backend local con FastAPI, SQLite y página web.
-6. Avatar 2D pseudo-holográfico e integración del MVP.
-7. Fase posterior: login de administrador único, avatar 3D/Unity, voz y validación con participantes.
+1. Verificar con cámara la recuperación sostenida a `NORMAL` y el panel de estado.
+2. Cerrar la validación funcional controlada de M1 en Windows y Linux.
+3. Backend local con FastAPI, SQLite y página web.
+4. Avatar 2D pseudo-holográfico e integración del MVP.
+5. Alertas sonoras y presentación web de las alertas.
+6. Fase posterior: login de administrador único, avatar 3D/Unity, voz y validación con participantes.

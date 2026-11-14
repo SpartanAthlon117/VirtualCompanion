@@ -97,13 +97,13 @@ python vision/src/camera.py
 python vision/src/face_tracker.py
 ```
 
-`face_tracker.py` inicia la cámara, la calibración del EAR, la clasificación ocular, la detección de parpadeos y cierres prolongados, el cálculo de PERCLOS y el overlay de métricas. Para salir, pulsa `q`, `ESC` o cierra la ventana. `camera.py` solo utiliza `q`.
+`face_tracker.py` inicia la cámara, la calibración del EAR, la clasificación ocular, la detección de parpadeos y cierres prolongados, el cálculo de PERCLOS, la evaluación experimental de fatiga, el gestor de alertas y el overlay de métricas y estado. Para salir, pulsa `q`, `ESC` o cierra la ventana. `camera.py` solo utiliza `q`. La consola muestra líneas `EVENTO`, `ESTADO`, `ALERTA` y como máximo una línea `DEBUG` por segundo.
 
 En Linux se verificaron cámara, modelo, MediaPipe, EAR y calibración mediante un smoke test sin ventana. La ejecución de `face_tracker.py` con interfaz gráfica no se validó en esa sesión. La web local, FastAPI y SQLite todavía no forman parte del código.
 
 ### Registro de eventos
 
-La ejecución crea `logs/virtualcompanion.log`, ruta definida en la sección `[logging]` de `config/default.toml`. El archivo rota al alcanzar `max_bytes` y conserva `backup_count` copias; se escribe en UTF-8 con el nivel configurado (`INFO` por defecto). El CLI mantiene su salida por consola y no duplica esos mensajes en el archivo.
+La ejecución crea `logs/virtualcompanion.log`, ruta definida en la sección `[logging]` de `config/default.toml`. El archivo rota al alcanzar `max_bytes` y conserva `backup_count` copias; se escribe en UTF-8 con el nivel configurado (`INFO` por defecto). El CLI registra eventos, cambios de estado y alertas en el archivo, y mantiene su salida por consola.
 
 ## 7. Ejecutar las pruebas
 

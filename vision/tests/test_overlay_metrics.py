@@ -1,9 +1,14 @@
 from vision.src.overlay_metrics import (
+    build_assessment_lines,
     build_metrics_lines,
+    format_alert_level,
     format_blink_rate,
     format_duration,
     format_perclos,
+    format_state_label,
     format_time_since_last_blink,
+    to_ascii_text,
+    wrap_text,
 )
 
 
@@ -180,3 +185,126 @@ def test_omits_perclos_line_without_window():
     assert not any(
         line.startswith("PERCLOS") for line in lines
     )
+
+
+def test_formats_state_and_alert_labels():
+    assert format_state_label("NORMAL") == "NORMAL"
+    assert format_state_label("WARNING") == "ADVERTENCIA"
+    assert format_state_label("FATIGUE") == "FATIGA"
+    assert format_state_label("DROWSY") == "DROWSY"
+
+    assert format_alert_level("NONE") == "SIN ALERTA"
+    assert format_alert_level("INFO") == "INFO"
+    assert format_alert_level("WARNING") == "ADVERTENCIA"
+    assert format_alert_level("CRITICAL") == "CRITICA"
+
+
+def test_converts_text_to_ascii():
+    assert (
+        to_ascii_text("Evaluación ≥ fatiga — crítica")
+        == "Evaluacion >= fatiga - critica"
+    )
+
+
+def test_wraps_text_at_word_boundaries():
+    assert wrap_text("uno dos tres cuatro", 7) == [
+        "uno dos",
+        "tres",
+        "cuatro",
+    ]
+
+
+def test_wraps_text_with_long_words():
+    assert wrap_text("abcdefghij", 4) == [
+        "abcd",
+        "efgh",
+        "ij",
+    ]
+
+
+def test_wrap_text_rejects_invalid_width():
+    try:
+        wrap_text("texto", 0)
+    except ValueError as error:
+        assert "width" in str(error)
+    else:
+        raise AssertionError("Se esperaba ValueError.")
+
+
+def test_builds_assessment_lines_without_reasons():
+    lines = build_assessment_lines(
+        state="NORMAL",
+        reasons=(),
+        alert_level="NONE",
+    )
+
+    assert lines == [
+        "Estado: NORMAL",
+        "Nivel: SIN ALERTA",
+        "Motivo: Sin motivos registrados.",
+    ]
+
+
+def test_builds_assessment_lines_with_wrapped_reason():
+    lines = build_assessment_lines(
+        state="WARNING",
+        reasons=(
+            "PERCLOS 0.25 >= 0.20 durante 10.0 s "
+            "(sostenimiento: 10.0 s).",
+        ),
+        alert_level="WARNING",
+    )
+
+    assert lines[0] == "Estado: ADVERTENCIA"
+    assert lines[1] == "Nivel: ADVERTENCIA"
+    assert lines[2].startswith("Motivo: PERCLOS")
+    assert any("sostenimiento" in line for line in lines)
+    assert len(lines) <= 6
+
+
+def test_builds_paused_assessment_lines_and_sanitizes_reason():
+    lines = build_assessment_lines(
+        state="FATIGUE",
+        reasons=("Sin rostro: evaluación en pausa.",),
+        alert_level="CRITICAL",
+        paused=True,
+    )
+
+    assert lines[0] == "Estado: FATIGA (PAUSA)"
+    assert lines[1] == "Nivel: CRITICA"
+    assert all("ó" not in line for line in lines)
+    assert any("evaluacion" in line for line in lines)
+
+
+def test_assessment_lines_respect_maximum_length():
+    lines = build_assessment_lines(
+        state="FATIGUE",
+        reasons=(
+            "Primer motivo muy largo para ocupar varias lineas.",
+            "Segundo motivo que tampoco deberia aparecer completo.",
+        ),
+        alert_level="CRITICAL",
+        max_lines=4,
+    )
+
+    assert len(lines) == 4
+
+
+def test_assessment_lines_show_trigger_and_recovery_hint():
+    lines = build_assessment_lines(
+        state="FATIGUE",
+        reasons=(
+            "PERCLOS 0.31 >= 0.30 durante 10.0 s "
+            "(sostenimiento: 10.0 s).",
+            "Recuperación: PERCLOS < 0.12 durante 20.0 s "
+            "(actual: 0.31).",
+        ),
+        alert_level="CRITICAL",
+    )
+
+    text = " ".join(lines)
+
+    assert "Motivo: PERCLOS" in text
+    assert "Recuperacion: PERCLOS < 0.12" in text
+    assert "actual: 0.31" in text
+    assert len(lines) <= 8

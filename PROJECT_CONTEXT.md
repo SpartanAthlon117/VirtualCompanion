@@ -4,13 +4,13 @@ VirtualCompanion es un prototipo académico y experimental para el monitoreo de 
 
 ## Alcance implementado
 
-El único módulo funcional es `vision/`: captura de webcam, MediaPipe Face Landmarker, cálculo del EAR, calibración, clasificación `OPEN`/`CLOSED`, detección de parpadeos, detección de cierres prolongados, métricas temporales, PERCLOS simplificado, manejo de pérdida de rostro y overlay.
+El módulo funcional es `vision/`: captura de webcam, MediaPipe Face Landmarker, cálculo del EAR, calibración, clasificación `OPEN`/`CLOSED`, detección de parpadeos, detección de cierres prolongados, métricas temporales, PERCLOS simplificado, máquina de estados experimental, gestor de alertas, manejo de pérdida de rostro y overlay de métricas y estado.
 
 El 2026-11-02 se ejecutó un smoke test técnico en Linux: cámara, modelo, landmarks, EAR y calibración funcionaron sin guardar imágenes ni video. La validación funcional controlada de M1 sigue pendiente.
 
 ## Alcance planificado del MVP
 
-El MVP acordado añade una página web local, avatar 2D, FastAPI, SQLite, máquina de estados y alertas. El cálculo de PERCLOS simplificado ya está implementado e integrado en la interfaz de visión. La web, el backend, la persistencia, el avatar y las alertas todavía no existen. El alcance detallado, las decisiones, los contratos y el backlog están en [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md).
+El MVP acordado añade una página web local, avatar 2D, FastAPI y SQLite. La máquina de estados y el gestor de alertas ya están implementados en el CLI; la web, el backend, la persistencia, el avatar y el audio de las alertas todavía no existen. El alcance detallado, las decisiones, los contratos y el backlog están en [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md).
 
 ## Documentos canónicos
 
@@ -23,4 +23,4 @@ El MVP acordado añade una página web local, avatar 2D, FastAPI, SQLite, máqui
 - `MEMORY.md`: memoria entre sesiones.
 - `CHANGELOG.md`: registro de cambios.
 
-La detección de fatiga, la máquina de estados, las alertas, el avatar, la voz, FastAPI, SQLite, PostgreSQL, el login de administrador y Unity todavía no forman parte del código implementado.
+El avatar, la voz, FastAPI, SQLite, PostgreSQL, el login de administrador y Unity todavía no forman parte del código implementado. La presentación web y el audio de las alertas tampoco están implementados.

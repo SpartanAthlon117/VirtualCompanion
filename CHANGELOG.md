@@ -4,6 +4,14 @@
 
 ### Added
 
+* `vision/src/state_machine.py`: `FatigueStateMachine` con estados `NORMAL`, `WARNING` y `FATIGUE`, histéresis, sostenimiento temporal, motivos explicables y recuperación sostenida.
+* `vision/src/alert_manager.py`: `AlertManager` con deduplicación, cooldowns independientes por nivel y pausa sin alertas.
+* `vision/src/models.py`: `Assessment` con `changed`, `paused` y `alert_level`; `AlertEvent`; `PipelineUpdate.assessment` y `PipelineUpdate.alerts`.
+* `vision/src/metrics_pipeline.py`: integración de la evaluación y las alertas en cada actualización.
+* `vision/src/overlay_metrics.py`: etiquetas de estado y nivel, conversión ASCII, ajuste de líneas y panel de evaluación.
+* `vision/src/face_tracker.py`: panel de estado, motivo y nivel; líneas `ESTADO` y `ALERTA` en consola; registro en el log; línea `DEBUG` con estado y nivel.
+* `vision/tests/test_state_machine.py`, `test_alert_manager.py`, `test_pipeline_fatigue.py` y `test_face_tracker_reporting.py`: pruebas de transiciones, alertas, integración y reporte; la suite total pasa a 195 pruebas.
+* Panel que explica el PERCLOS actual y el objetivo de recuperación cuando el estado está elevado.
 * `config/logging_setup.py`: logger de la aplicación con rotación por tamaño, salida UTF-8, nivel configurable y manejador de consola opcional.
 * `vision/tests/test_logging_setup.py`: 6 pruebas de creación del archivo y su directorio, nivel, consola opcional, reconfiguración idempotente, rotación y UTF-8.
 * Registro en archivo del inicio y fin de sesión, eventos de calibración, parpadeo, cierre prolongado y pérdida o recuperación de rostro, y errores.
@@ -34,6 +42,12 @@
 
 ### Changed
 
+- Recuperación a `NORMAL` documentada como estricta: PERCLOS `< 0.12` sostenido 20 s y sin cierre `>= 1.5 s`; después de un cierre largo puede tardar aproximadamente 80 s en completarse.
+- `README.md`, `docs/PROJECT_STATUS.md`, `docs/MVP_SCOPE.md`, `docs/SETUP.md`, `docs/validation/M1.md`, `PROJECT_CONTEXT.md` y `MEMORY.md`: estado, contratos, reglas, alertas, panel y validación actualizados.
+- `docs/MVP_SCOPE.md` y `MEMORY.md`: alcance, decisiones y próximos pasos actualizados.
+- `docs/MVP_SCOPE.md`: contratos `Assessment`, `PipelineUpdate` y `AlertEvent` alineados con el código.
+- `README.md` y `docs/PROJECT_STATUS.md`: prueba manual con cámara documentada; la recuperación sostenida queda pendiente de verificación.
+- `vision/src/state_machine.py`: los estados elevados explican el PERCLOS actual y el objetivo de recuperación en lugar de un mensaje genérico de histéresis.
 - `face_tracker.py`: integración del clasificador de estado ocular y visualización del estado `OPEN/CLOSED` en la interfaz.
 - `face_tracker.py`: integración de `PerclosCalculator` en el flujo en vivo, pausa y reanudación con la presencia del rostro, valor en el overlay y en la salida de depuración.
 - `face_tracker.py`: ajuste del inicio y la separación vertical del overlay para incluir la línea de PERCLOS sin salir del frame de 480 px.

@@ -17,12 +17,22 @@ from config.logging_setup import configure_logging
 from config.settings import AppSettings, load_settings
 from vision.src.engine import VisionEngine, VisionEngineError
 from vision.src.models import (
+    AlertEvent,
+    AlertLevel,
+    Assessment,
     CalibrationStatus,
+    FatigueState,
     MetricsSnapshot,
     VisionEvent,
     VisionEventType,
 )
-from vision.src.overlay_metrics import build_metrics_lines, format_perclos
+from vision.src.overlay_metrics import (
+    build_assessment_lines,
+    build_metrics_lines,
+    format_alert_level,
+    format_perclos,
+    format_state_label,
+)
 
 
 WINDOW_NAME = "Virtual Companion - Face Tracking"
@@ -76,6 +86,12 @@ def main() -> None:
                         f"Duración: {event.duration_seconds:.3f}s"
                     )
 
+            if update.assessment.changed:
+                _report_assessment(logger, update.assessment)
+
+            for alert in update.alerts:
+                _report_alert(logger, alert)
+
             # Sin rostro, el evento FACE_LOST ya informa de la pausa.
             if (
                 engine_frame.has_new_result
@@ -87,6 +103,7 @@ def main() -> None:
                     _print_debug_update(
                         update.snapshot,
                         update.calibration,
+                        update.assessment,
                     )
                     last_debug_elapsed = elapsed
 
@@ -101,6 +118,9 @@ def main() -> None:
                 update.snapshot,
                 update.calibration,
             )
+
+            if update.calibration.eye_threshold is not None:
+                _draw_assessment(frame, update.assessment)
 
             cv2.imshow(WINDOW_NAME, frame)
 
@@ -367,6 +387,63 @@ def _draw_calibration_and_metrics(
         )
 
 
+def _draw_assessment(
+    frame,
+    assessment: Assessment,
+) -> None:
+    """Dibuja estado, nivel y motivo en el panel derecho."""
+
+    lines = build_assessment_lines(
+        state=assessment.state,
+        reasons=assessment.reasons,
+        alert_level=assessment.alert_level,
+        paused=assessment.paused,
+    )
+    color = _assessment_color(assessment)
+
+    start_x = max(20, frame.shape[1] - 300)
+    start_y = 40
+
+    for index, text in enumerate(lines):
+        if index == 0:
+            scale = 0.7
+            thickness = 2
+            line_color = color
+        elif index == 1:
+            scale = 0.55
+            thickness = 1
+            line_color = color
+        else:
+            scale = 0.5
+            thickness = 1
+            line_color = (255, 255, 255)
+
+        cv2.putText(
+            frame,
+            text,
+            (start_x, start_y + index * 22),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            scale,
+            line_color,
+            thickness,
+        )
+
+
+def _assessment_color(assessment: Assessment) -> tuple[int, int, int]:
+    """Devuelve el color del estado, atenuado durante una pausa."""
+
+    if assessment.paused:
+        return (0, 255, 255)
+
+    colors = {
+        FatigueState.NORMAL: (0, 255, 0),
+        FatigueState.WARNING: (0, 255, 255),
+        FatigueState.FATIGUE: (0, 0, 255),
+    }
+
+    return colors.get(assessment.state, (255, 255, 255))
+
+
 def _log_event(logger: logging.Logger, event: VisionEvent) -> None:
     """Registra un evento con el nivel adecuado en el archivo de log."""
 
@@ -385,6 +462,55 @@ def _log_event(logger: logging.Logger, event: VisionEvent) -> None:
             event.message,
             event.duration_seconds,
         )
+
+
+def _report_assessment(
+    logger: logging.Logger,
+    assessment: Assessment,
+) -> None:
+    """Registra e imprime un cambio de estado de fatiga."""
+
+    reasons = " ".join(assessment.reasons)
+    level = _assessment_log_level(assessment.state)
+
+    logger.log(
+        level,
+        "Estado %s. Motivos: %s",
+        assessment.state,
+        reasons,
+    )
+
+    label = format_state_label(assessment.state)
+    print(f"ESTADO | {label}: {reasons}")
+
+
+def _report_alert(
+    logger: logging.Logger,
+    alert: AlertEvent,
+) -> None:
+    """Registra e imprime una alerta generada."""
+
+    if alert.level == AlertLevel.CRITICAL:
+        level = logging.CRITICAL
+    elif alert.level == AlertLevel.WARNING:
+        level = logging.WARNING
+    else:
+        level = logging.INFO
+
+    logger.log(level, "Alerta %s: %s", alert.level, alert.message)
+    print(f"ALERTA {format_alert_level(alert.level)} | {alert.message}")
+
+
+def _assessment_log_level(state: str) -> int:
+    """Asigna un nivel de registro al estado de fatiga."""
+
+    if state == FatigueState.WARNING:
+        return logging.WARNING
+
+    if state == FatigueState.FATIGUE:
+        return logging.CRITICAL
+
+    return logging.INFO
 
 
 def _debug_is_due(
@@ -411,6 +537,7 @@ def _debug_is_due(
 def _print_debug_update(
     snapshot: MetricsSnapshot,
     calibration: CalibrationStatus,
+    assessment: Assessment,
 ) -> None:
     """Imprime un resumen de depuración por cada intervalo."""
 
@@ -422,7 +549,9 @@ def _print_debug_update(
         f"Muestras: {calibration.sample_count} | "
         f"Ojos: {snapshot.eye_state} | "
         f"Parpadeos: {snapshot.blink_count} | "
-        f"PERCLOS: {format_perclos(snapshot.perclos)}"
+        f"PERCLOS: {format_perclos(snapshot.perclos)} | "
+        f"Estado: {assessment.state} | "
+        f"Nivel: {assessment.alert_level}"
     )
 
 
